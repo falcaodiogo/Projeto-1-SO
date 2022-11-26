@@ -179,7 +179,7 @@ for PID in ${processID[@]}; do
     var_1 = $(cat $PID/io | grep 'rchar')
     var_2 = $(cat $PID/io | grep 'wchar')
     rchar_new = ${var_1 // [!0-9] /}
-    wchar_new = ${var_2 // [!0-9] /}
+    wchar_new = ${var_2 // [!0-9] /}  # 
 
     rater = $($rchar_new - $rchar)
     rater = $( echo "scale = 2; $rater / $exec_time" | bc -l)  # Calcula o rater

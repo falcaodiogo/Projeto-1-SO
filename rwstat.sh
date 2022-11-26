@@ -115,14 +115,17 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
             # Verifica se existem as informações rchar e wchar
             if $(cat /proc/$pid/io | grep -q 'rchar\|wchar'); then  
                 processID[$pid]=$pid
+                
                 rchar_array[$pid]=$(cat /proc/$pid/io | grep rchar | cut -d " " -f 2) || exit
                 wchar_array[$pid]=$(cat /proc/$pid/io | grep wchar | cut -d " " -f 2) || exit
+
                 comm[$pid]=$(ps -p $pid -o comm | tail -n +2)
+
                 user[$pid]=$(ps -p $pid -o user | tail -n +2)
-                # start_date=$(ps -o lstart = -p $pid)
+
                 start_date=$(ps -p $pid -o lstart | tail -n +2)
-                # start[$pid]=$(date --date="$start_date" "+%b %d %H:%M")
                 start[$pid]=$(date --date="$start_date" "+%b %d %H:%M" )
+
                 elapsed[$pid]=$(ps -p $pid -o etime | tail -n +2)
             fi
         fi
