@@ -16,9 +16,18 @@ user="*"                # Caso o utilizador não insira nenhum argumento do tipo
 start_date=0            # Guarda a data de início da execução do script
 end_date=$(date +%s)    # Guarda a data de fim da execução do script 
 exec_time=${@: -1}      # Guarda o último argumento (número de segundos a analisar)
+# VAI SERVIR PRA O SLEEP
 total=0                 # Guarda o número de vezes que foram inseridos comandos errados
 pid=0                   # Guarda o pid do processo que está a ser analisado
 
+
+#---------------- Verificação do argumento obrigatório
+if [[ "$exec_time" != 0 && "$exec_time" ==  ]]; then
+    echo "BACAHAU"
+else
+    echo "ERRO: Argumento obrigatório em falta"
+    exit 1
+fi
 
 while getopts ":c:s:e:u:m:M:p:r:w" opt; do   # Percorrer todos os argumentos
     case $opt in
@@ -95,6 +104,7 @@ done
 
 
 # Falta fazer verificação do PID (erro inicial do script -> "ficheiro ou pasta inexistentes")
+
 for pid in $(ps -eo pid | tail -n +2); do
     # verifica se o processo existe
     if ps -p $pid > /dev/null; then

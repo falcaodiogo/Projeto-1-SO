@@ -100,39 +100,25 @@ done
 shift $((OPTIND -1))    # Remove os argumentos já analisados
 
 
-# Verifica se o último argumento está presente
-if [[ $# == 0 ]] ; then
-    echo "ERRO: o último argumento tem de ser obrigatoriamente o número de segundos que pretende analisar." 
-    set -e
-fi
-
-# Verifica se o último argumento é o número de segundos a analisar
-if ! [[ $exec_time =~ $rexp ]] ; then
-    echo "ERRO: o último argumento tem de ser obrigatoriamente o número de segundos que pretende analisar."
-    set -e
-fi
-
-# Verifica se a data de início é menor que a data de fim
-if [[ $start_date > $end_date ]] ; then
+# Verifica se a data de início é maior que a data de fim
+if [[ $end_date -le $start_date ]]; then
     echo "ERRO: A data de início não pode ser superior à data de fim."
-    set -e
+    exit 1
 fi
 
 # Verifica se o número de processos é válido
-if [[ $total > 1 ]] ; then
+if [[ $total -gt 1 ]]; then
     echo "ERRO: Foram inseridos comandos errados."
-    set -e
+    exit 1
 fi
 
-# SEMPRE VERDADEIRO ?
 # Verifica se o último argumento é o número de segundos a analisar
-if [[ "$exec_time"=~[0-9] ]] ; then
+if ! [[ "$exec_time" =~ ^[0-9]+$ && $exec_time != 0 ]]; then
     echo "ERRO: O último argumento tem de ser obrigatoriamente o número de segundos que pretende analisar."
-    set -e
+    exit 1
 fi
 
 index=0
-
 
 for i in $(ls -a | grep -Eo "[0-9]{1,5}"); do     # Irá agrupar os números no comando ls e percorrer os elementos um a um
     if [[ -f "$i/status" && -f "$i/io" && -f "$i/comm" ]] ; then   # O comando -f irá verificar se o ficheiro a que se quer aceder existe, se não existir avnça para o próximo processo
