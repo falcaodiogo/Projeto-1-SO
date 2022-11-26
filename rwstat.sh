@@ -5,7 +5,13 @@
 
 
 #!/bin/bash 
-
+# Definição de Arrays
+declare -a rchar_array   # Array que guarda os rchar
+declare -a wchar_array   # Array que guarda os wchar
+declare -a comm          # Array que guarda os comandos
+declare -a user          # Array que guarda os utilizadores
+declare -a start         # Array que guarda a data de início
+declare -a elapsed       # Array que guarda o tempo decorrido
 
 # Variáveis globais
 numProcesses="null"     # Número de processos  
@@ -20,12 +26,9 @@ exec_time=${@: -1}      # Guarda o último argumento (número de segundos a anal
 total=0                 # Guarda o número de vezes que foram inseridos comandos errados
 pid=0                   # Guarda o pid do processo que está a ser analisado
 
-
-#---------------- Verificação do argumento obrigatório
-if [[ "$exec_time" != 0 && "$exec_time" ==  ]]; then
-    echo "BACAHAU"
-else
-    echo "ERRO: Argumento obrigatório em falta"
+# Verificação se o argumento é um número inteiro positivo
+if ! [[ "$exec_time" =~ ^[0-9]+$ && $exec_time != 0 ]]; then
+    echo "ERRO: O último argumento tem de ser obrigatoriamente o número de segundos que pretende analisar."
     exit 1
 fi
 
@@ -103,65 +106,36 @@ while getopts ":c:s:e:u:m:M:p:r:w" opt; do   # Percorrer todos os argumentos
 done
 
 
-# Falta fazer verificação do PID (erro inicial do script -> "ficheiro ou pasta inexistentes")
-
-for pid in $(ps -eo pid | tail -n +2); do
+# Falta fazer verificação do PID (erro inicial do script -> "ficheiro ou pasta inexistentes"  E "sem permissão")
+for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
     # verifica se o processo existe
-    if ps -p $pid > /dev/null; then
-        processID[$pid]=$pid
+    if ps -p $pid > /dev/null; then 
+        # Verifica se temos permissão para aceder ao processo
+        if [[ -r "/proc/$pid/io" ]] ; then
+            # Verifica se existem as informações rchar e wchar
+            if $(cat /proc/$pid/io | grep -q 'rchar\|wchar'); then  
+                processID[$pid]=$pid
+                rchar_array[$pid]=$(cat /proc/$pid/io | grep rchar | cut -d " " -f 2) || exit
+                wchar_array[$pid]=$(cat /proc/$pid/io | grep wchar | cut -d " " -f 2) || exit
+                comm[$pid]=$(ps -p $pid -o comm | tail -n +2)
+                user[$pid]=$(ps -p $pid -o user | tail -n +2)
+                # start_date=$(ps -o lstart = -p $pid)
+                start_date=$(ps -p $pid -o lstart | tail -n +2)
+                # start[$pid]=$(date --date="$start_date" "+%b %d %H:%M")
+                start[$pid]=$(date --date="$start_date" "+%b %d %H:%M" )
+                elapsed[$pid]=$(ps -p $pid -o etime | tail -n +2)
+            fi
+        fi
     fi
 done
-
-# Append array with rchar values
-for pid in $(ps -eo pid | tail -n +2); do
-    rchar_array[$pid]=$(sudo cat /proc/$pid/io | grep rchar | cut -d " " -f 2) || exit
-    # echo "AQUI2"
-done
-
-# Append array with wchar values
-for pid in $(ps -eo pid | tail -n +2); do
-    wchar_array[$pid]=$(sudo cat /proc/$pid/io | grep wchar | cut -d " " -f 2) || exit
-    # echo "AQUI3"
-done
-
-# Append array with process command
-for pid in $(ps -eo pid | tail -n +2); do
-    command[$pid]=$(ps -p $pid -o comm | tail -n +2)
-done
-
-# Append array with process user
-for pid in $(ps -eo pid | tail -n +2); do
-    user[$pid]=$(ps -p $pid -o user | tail -n +2)
-done
-
-
-###################
-# Para calcular o tempo de execução do script (argumento)
-# Append array with process start time
-for pid in $(ps -eo pid | tail -n +2); do
-    start[$pid]=$(ps -p $pid -o start | tail -n +2)
-done
-
-# Append array with process elapsed time
-for pid in $(ps -eo pid | tail -n +2); do
-    elapsed[$pid]=$(ps -p $pid -o etime | tail -n +2)
-done
-
-# # Append array with process end time
-# for pid in $(ps -eo pid | tail -n +2); do
-#     end[$pid]=$(date -d "${start[$pid]} ${elapsed[$pid]}" +%s)
-# done
-###################
-
-
 
 # Impressão de dados
 
 if [[ $numProcesses != 0 ]] ; then
-    printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "COMM" "USER" "PID" "RCHAR" "WCHAR" "RATER" "RATEW" "DATE"  # Impressão do cabeçalho
+    printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "COMM" "USER" "PID" "READB" "WRITEB" "RATER" "RATEW" "DATE"  # Impressão do cabeçalho
     # impressão dos dados -> COMM, USER, PID, RCHAR, WCHAR, RATER, RATEW, DATE
     for pid in $(ps -eo pid | tail -n +2); do
-        printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "${command[$pid]}" "${user[$pid]}" "${processID[$pid]}" "${rchar_array[$pid]}" "${wchar_array[$pid]}" "${rchar_array[$pid]}" "${wchar_array[$pid]}" "${start[$pid]}"
+        printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "${comm[$pid]}" "${user[$pid]}" "${processID[$pid]}" "${rchar_array[$pid]}" "${wchar_array[$pid]}" "${rchar_array[$pid]}" "${wchar_array[$pid]}" "${start[$pid]}"
     done 
 else
     echo "AVISO: Nenhum processo válido encontrado"  # Caso não existam processos válidos
