@@ -138,6 +138,10 @@ if [[ $numProcesses != 0 ]] ; then
     printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "COMM" "USER" "PID" "READB" "WRITEB" "RATER" "RATEW" "DATE"  # Impressão do cabeçalho
     # impressão dos dados -> COMM, USER, PID, RCHAR, WCHAR, RATER, RATEW, DATE
     for pid in $(ps -eo pid | tail -n +2); do
+        # if blank line -> skip
+        if [[ -z ${processID[$pid]} ]]; then
+            continue
+        fi
         printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "${comm[$pid]}" "${user[$pid]}" "${processID[$pid]}" "${rchar_array[$pid]}" "${wchar_array[$pid]}" "${rchar_array[$pid]}" "${wchar_array[$pid]}" "${start[$pid]}"
     done 
 else
