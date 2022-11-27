@@ -37,20 +37,7 @@ while getopts ":c:s:e:u:m:M:p:r:w" opt; do   # Percorrer todos os argumentos
     case $opt in
         c)
             comm_opt={$OPTARG}                   # Guarda o comando
-            option="-c"
-        ;;
-
-        p)
-            numProcesses={$OPTARG}           # Guarda o número de processos
-            if ! [[ $numProcesses =~ $rexp ]] ; then       # Verifica do argumento, este tem de ser um número inteiro positivo
-                echo "Erro: O argumento do '-p' tem de ser um número positivo."
-                exit 1
-                
-            fi
-        ;;
-
-        u)
-            user={$OPTARG}                   # Guarda o utilizador
+            comm="-c"
         ;;
 
         s) 
@@ -62,7 +49,7 @@ while getopts ":c:s:e:u:m:M:p:r:w" opt; do   # Percorrer todos os argumentos
                 exit 1
             fi
         ;;
-        
+
         e)
             eDate=$OPTARG                  # Guarda a data de fim
             if date -d "$eDate" > /dev/null 2>&1; then     # Verifica se a data é válida
@@ -73,13 +60,8 @@ while getopts ":c:s:e:u:m:M:p:r:w" opt; do   # Percorrer todos os argumentos
             fi
         ;;
 
-        r)
-            reverse=1                      # Ativa a ordenação reversa
-        ;;
-
-        w)
-            order=1                        # Ativa a ordenação por write values
-
+        u)
+            user={$OPTARG}                   # Guarda o utilizador
         ;;
 
         m)
@@ -100,6 +82,24 @@ while getopts ":c:s:e:u:m:M:p:r:w" opt; do   # Percorrer todos os argumentos
 
         ;;
 
+        p)
+            numProcesses={$OPTARG}           # Guarda o número de processos
+            if ! [[ $numProcesses =~ $rexp ]] ; then       # Verifica do argumento, este tem de ser um número inteiro positivo
+                echo "Erro: O argumento do '-p' tem de ser um número positivo."
+                exit 1
+                
+            fi
+        ;;
+
+        r)
+            reverse=1                      # Ativa a ordenação reversa
+        ;;
+
+        w)
+            order=1                        # Ativa a ordenação por write values
+
+        ;;
+
         *)
             echo "Erro: Argumento(s) inválido(s)."
             exit 1
@@ -117,44 +117,46 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
             # Verifica se existem as informações rchar e wchar
             if $(cat /proc/$pid/io | grep -q 'rchar\|wchar'); then  
 
-                # PID --------------------------------------------------------------------------
+                # pid
                 processID[$count]=$pid
 
-                # READB e WRITEB ---------------------------------------------------------------
+                # rchar
                 rchar_array[$count]=$(cat /proc/$pid/io | grep rchar | cut -d " " -f 2) 
+
+                # wchar
                 wchar_array[$count]=$(cat /proc/$pid/io | grep wchar | cut -d " " -f 2)
                 
-                # RATER e RATEW -----------------------------------------------------------------
-                rchar=${rchar_array[$count]}
+                # rater
+                rchar=${rchar_array[$count]}    #rchar original
+
+                rchar_new=$(cat /proc/$pid/io | grep 'rchar')   #novo rchar
+                rchar_new=${rchar_new//[!0-9]/}   # var_1//[^0-9]/ substitui tudo o que não for um número por nada
+
+                rater=$( echo "scale=2;($rchar_new-$rchar)/$exec_time"|bc -l)  #rater = rchar_new - rchar / exec_time
+                rater_array[$count]=${rater/#./0.}
+
+
+                # ratew
                 wchar=${wchar_array[$count]}
 
-                var_1=$(cat /proc/$pid/io | grep 'rchar')
-                var_2=$(cat /proc/$pid/io | grep 'wchar')
+                wchar_new=$(cat /proc/$pid/io | grep 'wchar')
+                wchar_new=${wchar_new//[!0-9]/}  
 
-                rchar_new=${var_1//[!0-9]/}   # Vai buscar o valor de rchar
-                wchar_new=${var_2//[!0-9]/}    
+                ratew=$( echo "scale=2;($wchar_new-$wchar)/$exec_time"|bc -l)  # Calcula o ratew
+                ratew_array[$count]=${ratew/#./0.}
 
-                rater="$(($rchar_new-$rchar))"
-                rater=$( echo "scale=2;$rater/$exec_time"|bc -l)  # Calcula o rater
-                rater=${rater/#./0.}      # Caso o rater seja .x, irá colocar 0.x sendo x um número qualquer
-                rater_array[$count]=$rater
 
-                ratew="$(($wchar_new-$wchar))"
-                ratew=$( echo "scale=2;$ratew/$exec_time"|bc -l)  # Calcula o ratew
-                ratew=${ratew/#./0.}
-                ratew_array[$count]=$ratew
-
-                # COMMAND -----------------------------------------------------------------------
+                # command
                 comm[$count]=$(ps -p $pid -o comm | tail -n +2)
                 
-                # USER --------------------------------------------------------------------------
+                # user
                 user[$count]=$(ps -p $pid -o user | tail -n +2)
             
-                # STARTTIME ---------------------------------------------------------------------
+                # start_time
                 start_date=$(ps -p $pid -o lstart | tail -n +2)
                 start_date[$count]=$(date --date="$start_date" "+%b %d %H:%M" )
 
-                # COUNT -------------------------------------------------------------------------
+                # end_time
                 count=$(($count+1))
             fi
         fi
