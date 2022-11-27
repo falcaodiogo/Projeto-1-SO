@@ -56,7 +56,8 @@ while getopts ":c:s:e:u:m:M:p:r:w" opt; do   # Percorrer todos os argumentos
         ;;
 
         u)
-            user={$OPTARG}                   # Guarda o utilizador
+            user_opt={$OPTARG}                   # Guarda o utilizador
+            option="-u"
         ;;
 
         m)
@@ -111,7 +112,7 @@ fi
 
 count=0
 
-while [[ $(date -u +%s) -le $endtime ]]; do
+# while [[ $(date -u +%s) -le $endtime ]]; do
 # while [ timeout $seconds]; do
     for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
         # verifica se o processo existe
@@ -166,11 +167,10 @@ while [[ $(date -u +%s) -le $endtime ]]; do
             fi
         fi
     done
-done 
+# done 
 
 
-if [ $option=="-c" ]; then
-    echo "$comm_opt"
+if [[ $option=="-c" ]]; then
     for i in "${!comm[@]}"; do
         command=(${comm[i]})
         first_char=${command:0:1}
@@ -189,6 +189,26 @@ if [ $option=="-c" ]; then
 	done
 fi
 
+# Opção -u
+if [[ $option=="-u" ]] ; then
+    if [[ $user_opt != "${!user[@]}" ]] ; then   # Verifica se o utilizador inserido existe
+        echo "ERRO: O utilizador não existe"
+        exit 1
+    fi
+
+    for i in "${!user[@]}" ; do
+        if [[ ! $user[i]==$user_opt ]] ; then
+            unset comm[i]   
+            unset user[i]
+            unset processID[i]
+            unset rchar_array[i]
+            unset wchar_array[i]
+            unset rater_array[i]
+            unset ratew_array[i]
+            unset start_date[i]
+        fi
+    done
+fi
 max=$(($count))
 
 # Impressão de dados
@@ -197,7 +217,7 @@ if [[ $numProcesses != 0 ]] ; then
     printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "COMM" "USER" "PID" "READB" "WRITEB" "RATER" "RATEW" "DATE"  # Impressão do cabeçalho
     for ((i=0; i<$max; i++)); do
         # se o array for null, não imprime nada
-        if [[ ${comm[i]} == "" ]]; then
+        if [[ ${comm[i]} == ""  || ${user[i]} == "" ]]; then
             continue
         fi
         # AH só uma cena que eu descobri ontem o operador =~ é para ver se uma string é igual a uma expressão
