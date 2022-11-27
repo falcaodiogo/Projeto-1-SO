@@ -5,24 +5,25 @@
 
 
 #!/bin/bash 
+
 # Definição de Arrays
-declare -a rchar_array   # Array que guarda os rchar
-declare -a wchar_array   # Array que guarda os wchar
-declare -a comm          # Array que guarda os comandos
-declare -a user          # Array que guarda os utilizadores
-declare -a start         # Array que guarda a data de início
-declare -a elapsed       # Array que guarda o tempo decorrido
+declare -a rchar_array   
+declare -a wchar_array   
+declare -a rater_array   
+declare -a ratew_array   
+declare -a comm          
+declare -a user          
+declare -a start_date   
 
 # Variáveis globais
 numProcesses="null"     # Número de processos  
 reverse=0               # Encontra-se desativado, caso o utilizador ative, esta variável passa a ter o valor 1
 order=0                 # Por defeito, a ordenação é feita por ordem alfabética
-comm=". *"              # Caso o utilizador não insira nenhum argumento do tipo '-c' irá guardar todos os processos
-user="*"                # Caso o utilizador não insira nenhum argumento do tipo '-u' irá guardar todos os utilizadores
-start_date=0            # Guarda a data de início da execução do script
+comm_opt=". *"          # Caso o utilizador não insira nenhum argumento do tipo '-c' irá guardar todos os processos
+user_opt="*"                # Caso o utilizador não insira nenhum argumento do tipo '-u' irá guardar todos os utilizadores
+start_d=0            # Guarda a data de início da execução do script
 end_date=$(date +%s)    # Guarda a data de fim da execução do script 
 exec_time=${@: -1}      # Guarda o último argumento (número de segundos a analisar)
-# VAI SERVIR PRA O SLEEP
 total=0                 # Guarda o número de vezes que foram inseridos comandos errados
 pid=0                   # Guarda o pid do processo que está a ser analisado
 
@@ -34,6 +35,11 @@ fi
 
 while getopts ":c:s:e:u:m:M:p:r:w" opt; do   # Percorrer todos os argumentos
     case $opt in
+        c)
+            comm_opt={$OPTARG}                   # Guarda o comando
+            option="-c"
+        ;;
+
         p)
             numProcesses={$OPTARG}           # Guarda o número de processos
             if ! [[ $numProcesses =~ $rexp ]] ; then       # Verifica do argumento, este tem de ser um número inteiro positivo
@@ -45,10 +51,6 @@ while getopts ":c:s:e:u:m:M:p:r:w" opt; do   # Percorrer todos os argumentos
 
         u)
             user={$OPTARG}                   # Guarda o utilizador
-        ;;
-
-        c)
-            comm={$OPTARG}                   # Guarda o comando
         ;;
 
         s) 
@@ -105,7 +107,7 @@ while getopts ":c:s:e:u:m:M:p:r:w" opt; do   # Percorrer todos os argumentos
     esac
 done
 
-
+count=0
 # Falta fazer verificação do PID (erro inicial do script -> "ficheiro ou pasta inexistentes"  E "sem permissão")
 for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
     # verifica se o processo existe
@@ -114,53 +116,84 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
         if [[ -r "/proc/$pid/io" ]] ; then
             # Verifica se existem as informações rchar e wchar
             if $(cat /proc/$pid/io | grep -q 'rchar\|wchar'); then  
-                processID[$pid]=$pid
+
+                # PID --------------------------------------------------------------------------
+                processID[$count]=$pid
+
+                # READB e WRITEB ---------------------------------------------------------------
+                rchar_array[$count]=$(cat /proc/$pid/io | grep rchar | cut -d " " -f 2) 
+                wchar_array[$count]=$(cat /proc/$pid/io | grep wchar | cut -d " " -f 2)
                 
-                rchar_array[$pid]=$(cat /proc/$pid/io | grep rchar | cut -d " " -f 2) || exit
-                wchar_array[$pid]=$(cat /proc/$pid/io | grep wchar | cut -d " " -f 2) || exit
+                # RATER e RATEW -----------------------------------------------------------------
+                rchar=${rchar_array[$count]}
+                wchar=${wchar_array[$count]}
 
-                comm[$pid]=$(ps -p $pid -o comm | tail -n +2)
+                var_1=$(cat /proc/$pid/io | grep 'rchar')
+                var_2=$(cat /proc/$pid/io | grep 'wchar')
 
-                user[$pid]=$(ps -p $pid -o user | tail -n +2)
+                rchar_new=${var_1//[!0-9]/}   # Vai buscar o valor de rchar
+                wchar_new=${var_2//[!0-9]/}    
 
+                rater="$(($rchar_new-$rchar))"
+                rater=$( echo "scale=2;$rater/$exec_time"|bc -l)  # Calcula o rater
+                rater=${rater/#./0.}      # Caso o rater seja .x, irá colocar 0.x sendo x um número qualquer
+                rater_array[$count]=$rater
+
+                ratew="$(($wchar_new-$wchar))"
+                ratew=$( echo "scale=2;$ratew/$exec_time"|bc -l)  # Calcula o ratew
+                ratew=${ratew/#./0.}
+                ratew_array[$count]=$ratew
+
+                # COMMAND -----------------------------------------------------------------------
+                comm[$count]=$(ps -p $pid -o comm | tail -n +2)
+                
+                # USER --------------------------------------------------------------------------
+                user[$count]=$(ps -p $pid -o user | tail -n +2)
+            
+                # STARTTIME ---------------------------------------------------------------------
                 start_date=$(ps -p $pid -o lstart | tail -n +2)
-                start[$pid]=$(date --date="$start_date" "+%b %d %H:%M" )
+                start_date[$count]=$(date --date="$start_date" "+%b %d %H:%M" )
 
-                elapsed[$pid]=$(ps -p $pid -o etime | tail -n +2)
+                # COUNT -------------------------------------------------------------------------
+                count=$(($count+1))
             fi
         fi
     fi
 done
 
+
+# Caso o utilizador tenha introduzido o argumento -c para filtrar os processos através de uma expressão regular
+
+if [ $option=="-c" ]; then
+    echo "$comm_opt"
+    for i in "${!comm[@]}"; do
+        command=(${comm[i]})
+		if ! [[  $command =~ $comm_opt ]];then    # Irá retirar todos os processos(mais as suas informações) que forem diferentes da expressão regular que o utilizador inseriu 
+			unset comm[i]   
+            unset user[i]
+            unset processID[i]
+            unset rchar_array[i]
+            unset wchar_array[i]
+            unset rater_array[i]
+            unset ratew_array[i]
+            unset start_date[i]
+		fi
+	done
+fi
+
+max=$(($count))
+
 # Impressão de dados
 
 if [[ $numProcesses != 0 ]] ; then
     printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "COMM" "USER" "PID" "READB" "WRITEB" "RATER" "RATEW" "DATE"  # Impressão do cabeçalho
-    # impressão dos dados -> COMM, USER, PID, RCHAR, WCHAR, RATER, RATEW, DATE
-    for pid in $(ps -eo pid | tail -n +2); do
-        # if blank line -> skip
-        if [[ -z ${processID[$pid]} ]]; then
-            continue
-        fi
-        printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "${comm[$pid]}" "${user[$pid]}" "${processID[$pid]}" "${rchar_array[$pid]}" "${wchar_array[$pid]}" "${rchar_array[$pid]}" "${wchar_array[$pid]}" "${start[$pid]}"
-    done 
+    for ((i=0; i<$max; i++)); do
+        printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "${comm[$i]}" "${user[$i]}" "${processID[$i]}" "${rchar_array[$i]}" "${wchar_array[$i]}" "${rater_array[$i]}" "${ratew_array[$i]}" "${start_date[$i]}"
+    done
 else
-    echo "AVISO: Nenhum processo válido encontrado"  # Caso não existam processos válidos
+    echo "AVISO: Nenhum processo válido encontrado" 
     exit 1
 fi
-
-
-
-# Só para checar
-# # print process info
-# for pid in ${processID[@]}; do
-#     echo ${infoData[$pid]}
-# done
-
-# # print char values
-# for pid in ${processID[@]}; do
-#     echo "rchar: ${rchar_array[$pid]} wchar: ${wchar_array[$pid]}"
-# done
 
 
 exit 0
