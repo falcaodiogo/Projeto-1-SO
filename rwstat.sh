@@ -15,6 +15,7 @@ declare -a comm
 declare -a user          
 declare -a dates
 declare -a dates_seconds
+declare -a process_info
 
 # Variáveis globais
 numProcesses="null"     # Número de processos  
@@ -121,6 +122,62 @@ done
 sleep $seconds
 
 count=0
+# for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
+#     # verifica se o processo existe
+#     if ps -p $pid > /dev/null; then 
+#         # Verifica se temos permissão para aceder ao processo
+#         if [[ -r "/proc/$pid/io" ]] ; then
+#             # Verifica se existem as informações rchar e wchar
+#             if $(cat /proc/$pid/io | grep -q 'rchar\|wchar'); then  
+
+#                 # pid
+#                 processID[$count]=$pid
+
+#                 # rchar
+#                 rchar_array[$count]=$(cat /proc/$pid/io | grep rchar | cut -d " " -f 2) 
+
+#                 # wchar
+#                 wchar_array[$count]=$(cat /proc/$pid/io | grep wchar | cut -d " " -f 2)
+                
+#                 # rater
+#                 rchar=${rchar_array[$count]}    #rchar original
+
+#                 rchar_new=$(cat /proc/$pid/io | grep 'rchar')   #novo rchar
+#                 rchar_new=${rchar_new//[!0-9]/}   # var_1//[^0-9]/ substitui tudo o que não for um número por nada
+
+#                 rater=$( echo "scale=2;($rchar_new-$rchar)/$seconds"|bc -l)  #rater = rchar_new - rchar / tempo de execução (s)
+#                 rater_array[$count]=$rater
+
+
+#                 # ratew
+#                 wchar=${wchar_array[$count]}
+
+#                 wchar_new=$(cat /proc/$pid/io | grep 'wchar')
+#                 wchar_new=${wchar_new//[!0-9]/}  
+
+#                 ratew=$( echo "scale=2;($wchar_new-$wchar)/$seconds"|bc -l)
+#                 ratew_array[$count]=$ratew
+
+
+#                 # command
+#                 comm[$count]=$(ps -p $pid -o comm | tail -n +2)
+                
+#                 # user
+#                 user[$count]=$(ps -p $pid -o user | tail -n +2)
+            
+#                 # start_time
+#                 start_date=$(ps -p $pid -o lstart | tail -n +2)
+#                 dates_seconds[$count]=$start_date
+#                 dates[$count]=$(date --date="$start_date" "+%b %d %H:%M" )
+
+#                 # end_time
+#                 count=$(($count+1))
+#             fi
+#         fi
+#     fi
+# done
+
+#------------------------------------------------------------------------------------------
 for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
     # verifica se o processo existe
     if ps -p $pid > /dev/null; then 
@@ -130,208 +187,216 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
             if $(cat /proc/$pid/io | grep -q 'rchar\|wchar'); then  
 
                 # pid
-                processID[$count]=$pid
+                processID=$pid
 
                 # rchar
-                rchar_array[$count]=$(cat /proc/$pid/io | grep rchar | cut -d " " -f 2) 
+                rchar=$(cat /proc/$pid/io | grep rchar | cut -d " " -f 2) 
 
                 # wchar
-                wchar_array[$count]=$(cat /proc/$pid/io | grep wchar | cut -d " " -f 2)
+                wchar=$(cat /proc/$pid/io | grep wchar | cut -d " " -f 2)
                 
                 # rater
-                rchar=${rchar_array[$count]}    #rchar original
-
                 rchar_new=$(cat /proc/$pid/io | grep 'rchar')   #novo rchar
                 rchar_new=${rchar_new//[!0-9]/}   # var_1//[^0-9]/ substitui tudo o que não for um número por nada
 
                 rater=$( echo "scale=2;($rchar_new-$rchar)/$seconds"|bc -l)  #rater = rchar_new - rchar / tempo de execução (s)
-                rater_array[$count]=$rater
-
 
                 # ratew
-                wchar=${wchar_array[$count]}
-
                 wchar_new=$(cat /proc/$pid/io | grep 'wchar')
                 wchar_new=${wchar_new//[!0-9]/}  
-
                 ratew=$( echo "scale=2;($wchar_new-$wchar)/$seconds"|bc -l)
-                ratew_array[$count]=$ratew
-
 
                 # command
-                comm[$count]=$(ps -p $pid -o comm | tail -n +2)
+                comm=$(ps -p $pid -o comm | tail -n +2)
                 
                 # user
-                user[$count]=$(ps -p $pid -o user | tail -n +2)
+                user=$(ps -p $pid -o user | tail -n +2)
             
                 # start_time
-                start_date=$(ps -p $pid -o lstart | tail -n +2)
-                dates_seconds[$count]=$start_date
-                dates[$count]=$(date --date="$start_date" "+%b %d %H:%M" )
+                date=$(date -d "$(ps -p $pid -o lstart | tail -1 | awk '{print $1, $2, $3, $4}')" +"%b %d %H:%M" )
 
-                # end_time
+                # Adicionar a um array as informações todas
+                process_info[$count]="$comm $user $processID $rchar $wchar $rater $ratew $date"
                 count=$(($count+1))
             fi
         fi
     fi
 done
-
+# ------------------------------------------------------------------------------------------
 
 # Opção -c
-if [[ $option -eq "-c" ]]; then
-    for i in "${!comm[@]}"; do
-        command=(${comm[i]})
-        first_char=${command:0:1}
-        # Comparação de um comando com uma expressão regular
+# if [[ $option -eq "-c" ]]; then
+#     for i in "${!comm[@]}"; do
+#         command=(${comm[i]})
+#         first_char=${command:0:1}
+#         # Comparação de um comando com uma expressão regular
         
-		if [[ ! $first_char =~ $comm_opt ]]; then    # Irá retirar todos os processos(mais as suas informações) que forem diferentes da expressão regular que o utilizador inseriu 
-			unset comm[i]   
-            unset user[i]
-            unset processID[i]
-            unset rchar_array[i]
-            unset wchar_array[i]
-            unset rater_array[i]
-            unset ratew_array[i]
-            unset dates[i]
-		fi
-	done
-fi
+# 		if [[ ! $first_char =~ $comm_opt ]]; then    # Irá retirar todos os processos(mais as suas informações) que forem diferentes da expressão regular que o utilizador inseriu 
+# 			unset comm[i]   
+#             unset user[i]
+#             unset processID[i]
+#             unset rchar_array[i]
+#             unset wchar_array[i]
+#             unset rater_array[i]
+#             unset ratew_array[i]
+#             unset dates[i]
+# 		fi
+# 	done
+# fi
 
-# Opção -u
-if [[ $option -eq "-u" ]] ; then
-    for i in "${!rater_array[@]}"; do
-        for i in "${!user[@]}"; do
-            if [[ ${user[i]} != $user_opt ]]; then
-                unset comm[i]
-                unset user[i]
-                unset processID[i]
-                unset rchar_array[i]
-                unset wchar_array[i]
-                unset rater_array[i]
-                unset ratew_array[i]
-                unset dates[i]
-            fi
-        done
-    done
-fi
+# # Opção -u
+# if [[ $option -eq "-u" ]] ; then
+#     for i in "${!rater_array[@]}"; do
+#         for i in "${!user[@]}"; do
+#             if [[ ${user[i]} != $user_opt ]]; then
+#                 unset comm[i]
+#                 unset user[i]
+#                 unset processID[i]
+#                 unset rchar_array[i]
+#                 unset wchar_array[i]
+#                 unset rater_array[i]
+#                 unset ratew_array[i]
+#                 unset dates[i]
+#             fi
+#         done
+#     done
+# fi
 
-Opção -s 
-if [[ $option -eq "-s" ]] ; then
-    for i in "${!dates[@]}"; do
-        if [[ ${dates[i]} -gt $minDate ]]; then
-            unset comm[i]
-            unset user[i]
-            unset processID[i]
-            unset rchar_array[i]
-            unset wchar_array[i]
-            unset rater_array[i]
-            unset ratew_array[i]
-            unset dates[i]
-        fi
-    done
-fi
+# Opção -s 
+# if [[ $option -eq "-s" ]] ; then
+#     for i in "${!dates[@]}"; do
+#         if [[ ${dates[i]} -gt $minDate ]]; then
+#             unset comm[i]
+#             unset user[i]
+#             unset processID[i]
+#             unset rchar_array[i]
+#             unset wchar_array[i]
+#             unset rater_array[i]
+#             unset ratew_array[i]
+#             unset dates[i]
+#         fi
+#     done
+# fi
 
-Opção -m
-if [[ $option -eq "-m" ]] ; then
-    for i in "${!processID[@]}"; do
-        if [[ ${processID[i]} -gt $minPID ]]; then
-            unset comm[i]
-            unset user[i]
-            unset processID[i]
-            unset rchar_array[i]
-            unset wchar_array[i]
-            unset rater_array[i]
-            unset ratew_array[i]
-            unset dates[i]
-        fi
-    done
-fi
+# Opção -m
+# if [[ $option -eq "-m" ]] ; then
+#     for i in "${!processID[@]}"; do
+#         if [[ ${processID[i]} -gt $minPID ]]; then
+#             unset comm[i]
+#             unset user[i]
+#             unset processID[i]
+#             unset rchar_array[i]
+#             unset wchar_array[i]
+#             unset rater_array[i]
+#             unset ratew_array[i]
+#             unset dates[i]
+#         fi
+#     done
+# fi
 
-Opção -M
-if [[ $option -eq "-M" ]] ; then
-    for i in "${!processID[@]}"; do
-        if [[ ${processID[i]} -lt $maxPID ]]; then
-            unset comm[i]
-            unset user[i]
-            unset processID[i]
-            unset rchar_array[i]
-            unset wchar_array[i]
-            unset rater_array[i]
-            unset ratew_array[i]
-            unset dates[i]
-        fi
-    done
-fi
+# Opção -M
+# if [[ $option -eq "-M" ]] ; then
+#     for i in "${!processID[@]}"; do
+#         if [[ ${processID[i]} -lt $maxPID ]]; then
+#             unset comm[i]
+#             unset user[i]
+#             unset processID[i]
+#             unset rchar_array[i]
+#             unset wchar_array[i]
+#             unset rater_array[i]
+#             unset ratew_array[i]
+#             unset dates[i]
+#         fi
+#     done
+# fi
 
-if [[ $option=="-s" ]] ; then
-    echo "Bacalhau"
-    for i in "${!dates_seconds[@]}" ; do
-        if [[ $dates_seconds[i] -ge $sDate_opt ]] ; then
-            unset comm[i]   
-            unset user[i]
-            unset processID[i]
-            unset rchar_array[i]
-            unset wchar_array[i]
-            unset rater_array[i]
-            unset ratew_array[i]
-            unset dates[i]
-        fi
-    done
-fi
+# if [[ $option=="-s" ]] ; then
+#     echo "Bacalhau"
+#     for i in "${!dates_seconds[@]}" ; do
+#         if [[ $dates_seconds[i] -ge $sDate_opt ]] ; then
+#             unset comm[i]   
+#             unset user[i]
+#             unset processID[i]
+#             unset rchar_array[i]
+#             unset wchar_array[i]
+#             unset rater_array[i]
+#             unset ratew_array[i]
+#             unset dates[i]
+#         fi
+#     done
+# fi
 
-sort rater array in descending order
+#sort rater array in descending order
 
-for i in ${!rater_array[@]} ; do
-    for j in ${!rater_array[@]} ; do
-        if [[ ${rater_array[i]} -gt ${rater_array[j]} ]] ; then
-            temp=${rater_array[i]}
-            rater_array[i]=${rater_array[j]}
-            rater_array[j]=$temp
+# for i in ${!rater_array[@]} ; do
+#     for j in ${!rater_array[@]} ; do
+#         if [[ ${rater_array[i]} -gt ${rater_array[j]} ]] ; then
+#             temp=${rater_array[i]}
+#             rater_array[i]=${rater_array[j]}
+#             rater_array[j]=$temp
 
-            temp=${ratew_array[i]}
-            ratew_array[i]=${ratew_array[j]}
-            ratew_array[j]=$temp
+#             temp=${ratew_array[i]}
+#             ratew_array[i]=${ratew_array[j]}
+#             ratew_array[j]=$temp
 
-            temp=${rchar_array[i]}
-            rchar_array[i]=${rchar_array[j]}
-            rchar_array[j]=$temp
+#             temp=${rchar_array[i]}
+#             rchar_array[i]=${rchar_array[j]}
+#             rchar_array[j]=$temp
 
-            temp=${wchar_array[i]}
-            wchar_array[i]=${wchar_array[j]}
-            wchar_array[j]=$temp
+#             temp=${wchar_array[i]}
+#             wchar_array[i]=${wchar_array[j]}
+#             wchar_array[j]=$temp
 
-            temp=${comm[i]}
-            comm[i]=${comm[j]}
-            comm[j]=$temp
+#             temp=${comm[i]}
+#             comm[i]=${comm[j]}
+#             comm[j]=$temp
 
-            temp=${user[i]}
-            user[i]=${user[j]}
-            user[j]=$temp
+#             temp=${user[i]}
+#             user[i]=${user[j]}
+#             user[j]=$temp
 
-            temp=${processID[i]}
-            processID[i]=${processID[j]}
-            processID[j]=$temp
+#             temp=${processID[i]}
+#             processID[i]=${processID[j]}
+#             processID[j]=$temp
 
-            temp=${dates[i]}
-            dates[i]=${dates[j]}
-            dates[j]=$temp
-        fi
-    done
-done
+#             temp=${dates[i]}
+#             dates[i]=${dates[j]}
+#             dates[j]=$temp
+#         fi
+#     done
+# done
 
 max=$(($count))
 
 # Impressão de dados
 
+# if [[ $numProcesses != 0 ]] ; then
+#     printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "COMM" "USER" "PID" "READB" "WRITEB" "RATER" "RATEW" "DATE"  # Impressão do cabeçalho
+#     for ((i=0; i<$max ; i++)); do
+#         # se o array for null, não imprime nada
+#         if [[ ${comm[i]} == "" ]]; then
+#             continue
+#         fi
+#         # AH só uma cena que eu descobri ontem o operador =~ é para ver se uma string é igual a uma expressão
+#         printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "${comm[$i]}" "${user[$i]}" "${processID[$i]}" "${rchar_array[$i]}" "${wchar_array[$i]}" "${rater_array[$i]}" "${ratew_array[$i]}" "${dates[$i]}"
+#         if [[ $(($i+1)) -eq $numProcesses ]]; then
+#             break
+#         fi
+#     done
+# else
+#     echo "AVISO: Nenhum processo válido encontrado" 
+#     exit 1
+# fi
+
 if [[ $numProcesses != 0 ]] ; then
     printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "COMM" "USER" "PID" "READB" "WRITEB" "RATER" "RATEW" "DATE"  # Impressão do cabeçalho
     for ((i=0; i<$max ; i++)); do
         # se o array for null, não imprime nada
-        if [[ ${comm[i]} == "" ]]; then
+        information=${process_info[i]}
+        if [[ ${information[0]} == "" ]]; then
             continue
         fi
-        # AH só uma cena que eu descobri ontem o operador =~ é para ver se uma string é igual a uma expressão
-        printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "${comm[$i]}" "${user[$i]}" "${processID[$i]}" "${rchar_array[$i]}" "${wchar_array[$i]}" "${rater_array[$i]}" "${ratew_array[$i]}" "${dates[$i]}"
+        printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]}
         if [[ $(($i+1)) -eq $numProcesses ]]; then
             break
         fi
