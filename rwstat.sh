@@ -145,7 +145,7 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
                 rchar_new=${rchar_new//[!0-9]/}   # var_1//[^0-9]/ substitui tudo o que não for um número por nada
 
                 rater=$( echo "scale=2;($rchar_new-$rchar)/$seconds"|bc -l)  #rater = rchar_new - rchar / tempo de execução (s)
-                rater_array[$count]=${rater/#./0.}
+                rater_array[$count]=$rater
 
 
                 # ratew
@@ -155,7 +155,7 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
                 wchar_new=${wchar_new//[!0-9]/}  
 
                 ratew=$( echo "scale=2;($wchar_new-$wchar)/$seconds"|bc -l)
-                ratew_array[$count]=${ratew/#./0.}
+                ratew_array[$count]=$ratew
 
 
                 # command
@@ -199,6 +199,7 @@ fi
 
 # Opção -u
 if [[ $option -eq "-u" ]] ; then
+    for i in "${!rater_array[@]}"; do
         for i in "${!user[@]}"; do
             if [[ ${user[i]} != $user_opt ]]; then
                 unset comm[i]
@@ -211,72 +212,112 @@ if [[ $option -eq "-u" ]] ; then
                 unset dates[i]
             fi
         done
+    done
 fi
 
-# Opção -s 
-# if [[ $option -eq "-s" ]] ; then
-#     for i in "${!dates[@]}"; do
-#         if [[ ${dates[i]} -gt $minDate ]]; then
-#             unset comm[i]
-#             unset user[i]
-#             unset processID[i]
-#             unset rchar_array[i]
-#             unset wchar_array[i]
-#             unset rater_array[i]
-#             unset ratew_array[i]
-#             unset dates[i]
-#         fi
-#     done
-# fi
+Opção -s 
+if [[ $option -eq "-s" ]] ; then
+    for i in "${!dates[@]}"; do
+        if [[ ${dates[i]} -gt $minDate ]]; then
+            unset comm[i]
+            unset user[i]
+            unset processID[i]
+            unset rchar_array[i]
+            unset wchar_array[i]
+            unset rater_array[i]
+            unset ratew_array[i]
+            unset dates[i]
+        fi
+    done
+fi
 
-# Opção -m
-# if [[ $option -eq "-m" ]] ; then
-#     for i in "${!processID[@]}"; do
-#         if [[ ${processID[i]} -gt $minPID ]]; then
-#             unset comm[i]
-#             unset user[i]
-#             unset processID[i]
-#             unset rchar_array[i]
-#             unset wchar_array[i]
-#             unset rater_array[i]
-#             unset ratew_array[i]
-#             unset dates[i]
-#         fi
-#     done
-# fi
+Opção -m
+if [[ $option -eq "-m" ]] ; then
+    for i in "${!processID[@]}"; do
+        if [[ ${processID[i]} -gt $minPID ]]; then
+            unset comm[i]
+            unset user[i]
+            unset processID[i]
+            unset rchar_array[i]
+            unset wchar_array[i]
+            unset rater_array[i]
+            unset ratew_array[i]
+            unset dates[i]
+        fi
+    done
+fi
 
-# Opção -M
-# if [[ $option -eq "-M" ]] ; then
-#     for i in "${!processID[@]}"; do
-#         if [[ ${processID[i]} -lt $maxPID ]]; then
-#             unset comm[i]
-#             unset user[i]
-#             unset processID[i]
-#             unset rchar_array[i]
-#             unset wchar_array[i]
-#             unset rater_array[i]
-#             unset ratew_array[i]
-#             unset dates[i]
-#         fi
-#     done
-# fi
+Opção -M
+if [[ $option -eq "-M" ]] ; then
+    for i in "${!processID[@]}"; do
+        if [[ ${processID[i]} -lt $maxPID ]]; then
+            unset comm[i]
+            unset user[i]
+            unset processID[i]
+            unset rchar_array[i]
+            unset wchar_array[i]
+            unset rater_array[i]
+            unset ratew_array[i]
+            unset dates[i]
+        fi
+    done
+fi
 
-# if [[ $option=="-s" ]] ; then
-#     echo "Bacalhau"
-#     for i in "${!dates_seconds[@]}" ; do
-#         if [[ $dates_seconds[i] -ge $sDate_opt ]] ; then
-#             unset comm[i]   
-#             unset user[i]
-#             unset processID[i]
-#             unset rchar_array[i]
-#             unset wchar_array[i]
-#             unset rater_array[i]
-#             unset ratew_array[i]
-#             unset dates[i]
-#         fi
-#     done
-# fi
+if [[ $option=="-s" ]] ; then
+    echo "Bacalhau"
+    for i in "${!dates_seconds[@]}" ; do
+        if [[ $dates_seconds[i] -ge $sDate_opt ]] ; then
+            unset comm[i]   
+            unset user[i]
+            unset processID[i]
+            unset rchar_array[i]
+            unset wchar_array[i]
+            unset rater_array[i]
+            unset ratew_array[i]
+            unset dates[i]
+        fi
+    done
+fi
 
+sort rater array in descending order
+
+for i in ${!rater_array[@]} ; do
+    for j in ${!rater_array[@]} ; do
+        if [[ ${rater_array[i]} -gt ${rater_array[j]} ]] ; then
+            temp=${rater_array[i]}
+            rater_array[i]=${rater_array[j]}
+            rater_array[j]=$temp
+
+            temp=${ratew_array[i]}
+            ratew_array[i]=${ratew_array[j]}
+            ratew_array[j]=$temp
+
+            temp=${rchar_array[i]}
+            rchar_array[i]=${rchar_array[j]}
+            rchar_array[j]=$temp
+
+            temp=${wchar_array[i]}
+            wchar_array[i]=${wchar_array[j]}
+            wchar_array[j]=$temp
+
+            temp=${comm[i]}
+            comm[i]=${comm[j]}
+            comm[j]=$temp
+
+            temp=${user[i]}
+            user[i]=${user[j]}
+            user[j]=$temp
+
+            temp=${processID[i]}
+            processID[i]=${processID[j]}
+            processID[j]=$temp
+
+            temp=${dates[i]}
+            dates[i]=${dates[j]}
+            dates[j]=$temp
+        fi
+    done
+done
 
 max=$(($count))
 
