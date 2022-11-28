@@ -37,9 +37,15 @@ while getopts ":c:s:e:u:m:M:p:r:w" opt; do   # Percorrer todos os argumentos
         ;;
 
         s)  
-            sDate_opt={$OPTARG}               # Guarda a data de início
-            sDate_opt=$(date --date="$sDate_opt" "+%s")    # Guarda a data de início em segundos
+            # Data mínima
+            minDate=$OPTARG
+            minDate=$(date --date="$minDate" "+%b %d %H:%M" )    # Guarda a data de início da execução do script
+            if [ $? -ne 0 ]; then
+                echo "Data de início inválida"
+                exit 1
+            fi
             option="-s"
+        
         ;;
 
         e)
@@ -49,8 +55,9 @@ while getopts ":c:s:e:u:m:M:p:r:w" opt; do   # Percorrer todos os argumentos
         ;;
 
         u)
-            user_opt={$OPTARG}                   # Guarda o utilizador
+            user_opt=$OPTARG                   # Guarda o utilizador
             option="-u"
+
         ;;
 
         m)
@@ -164,7 +171,7 @@ done
 
 
 # Opção -c
-if [[ $option=="-c" ]]; then
+if [[ $option -eq "-c" ]]; then
     for i in "${!comm[@]}"; do
         command=(${comm[i]})
         first_char=${command:0:1}
@@ -183,27 +190,40 @@ if [[ $option=="-c" ]]; then
 	done
 fi
 
-# # Opção -u
-# if [[ $option=="-u" ]] ; then
-#     if [[ $user_opt != "${!user[@]}" ]] ; then   # Verifica se o utilizador inserido existe
-#         echo "ERRO: O utilizador não existe"
-#         exit 1
-#     fi
-#     for i in "${!user[@]}" ; do
-#         if [[ ! $user[i]==$user_opt ]] ; then
-#             unset comm[i]   
-#             unset user[i]
-#             unset processID[i]
-#             unset rchar_array[i]
-#             unset wchar_array[i]
-#             unset rater_array[i]
-#             unset ratew_array[i]
-#             unset dates[i]
-#         fi
-#     done
-# fi
+# Opção -u
+if [[ $option -eq "-u" ]] ; then
+        for i in "${!user[@]}"; do
+            if [[ ${user[i]} != $user_opt ]]; then
+                unset comm[i]
+                unset user[i]
+                unset processID[i]
+                unset rchar_array[i]
+                unset wchar_array[i]
+                unset rater_array[i]
+                unset ratew_array[i]
+                unset dates[i]
+            fi
+        done
+fi
 
-# # Opção -s
+# Opção -s 
+if [[ $option -eq "-s" ]] ; then
+    for i in "${!dates[@]}"; do
+        if [[ ${dates[i]} -gt $minDate ]]; then
+            unset comm[i]
+            unset user[i]
+            unset processID[i]
+            unset rchar_array[i]
+            unset wchar_array[i]
+            unset rater_array[i]
+            unset ratew_array[i]
+            unset dates[i]
+        fi
+    done
+fi
+
+
+
 # if [[ $option=="-s" ]] ; then
 #     echo "Bacalhau"
 #     for i in "${!dates_seconds[@]}" ; do
@@ -227,7 +247,7 @@ if [[ $numProcesses != 0 ]] ; then
     printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "COMM" "USER" "PID" "READB" "WRITEB" "RATER" "RATEW" "DATE"  # Impressão do cabeçalho
     for ((i=0; i<$max ; i++)); do
         # se o array for null, não imprime nada
-        if [[ ${comm[i]} == ""  || ${user[i]} == "" ]]; then
+        if [[ ${comm[i]} == "" ]]; then
             continue
         fi
         # AH só uma cena que eu descobri ontem o operador =~ é para ver se uma string é igual a uma expressão
