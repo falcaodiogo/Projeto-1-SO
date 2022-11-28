@@ -29,11 +29,17 @@ total=0                 # Guarda o número de vezes que foram inseridos comandos
 pid=0                   # Guarda o pid do processo que está a ser analisado
 
 
-while getopts ":c:s:e:u:m:M:p:r:w" opt; do   # Percorrer todos os argumentos
+# Verificação se "s" é o ultimo argumento
+if [ "$seconds" != "${@: -1}" ]; then
+    echo "ERRO: O argumento do tipo inteiro e positivo tem de ser o último"
+    exit 1
+fi
+
+while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
     case $opt in
         c)
             comm_opt=$OPTARG                  # Guarda o comando
-            comm="-c"
+            option="-c"
         ;;
 
         s)  
@@ -66,6 +72,7 @@ while getopts ":c:s:e:u:m:M:p:r:w" opt; do   # Percorrer todos os argumentos
                 exit 1
             fi
             minPID=$OPTARG                 # Guarda o PID mínimo
+            option="-m"
 
         ;;
 
@@ -79,11 +86,15 @@ while getopts ":c:s:e:u:m:M:p:r:w" opt; do   # Percorrer todos os argumentos
         ;;
 
         p)
-            numProcesses={$OPTARG}           # Guarda o número de processos
+            numProcesses=$OPTARG           # Guarda o número de processos
+            #verifica se existem 2 númereos 
+            if [ $# -lt 2 ]; then
+                echo "Erro!! O argumento do '-p' tem de ser um número positivo!!"
+                exit 1
+            fi
             if ! [[ $numProcesses =~ $rexp ]] ; then       # Verifica do argumento, este tem de ser um número inteiro positivo
                 echo "Erro!! O argumento do '-p' tem de ser um número positivo!!"
                 exit 1
-                
             fi
         ;;
 
@@ -104,11 +115,7 @@ while getopts ":c:s:e:u:m:M:p:r:w" opt; do   # Percorrer todos os argumentos
 done
 
 
-# Verificação se "s" é um número inteiro positivo -> s é o numero de segundos
-if ! [[ "$seconds" =~ ^[0-9]+$ && $seconds != 0 ]]; then
-    echo "ERRO: É obrigatório ter um argumento do tipo inteiro e positivo"
-    exit 1
-fi
+
 
 
 sleep $seconds
@@ -207,22 +214,52 @@ if [[ $option -eq "-u" ]] ; then
 fi
 
 # Opção -s 
-if [[ $option -eq "-s" ]] ; then
-    for i in "${!dates[@]}"; do
-        if [[ ${dates[i]} -gt $minDate ]]; then
-            unset comm[i]
-            unset user[i]
-            unset processID[i]
-            unset rchar_array[i]
-            unset wchar_array[i]
-            unset rater_array[i]
-            unset ratew_array[i]
-            unset dates[i]
-        fi
-    done
-fi
+# if [[ $option -eq "-s" ]] ; then
+#     for i in "${!dates[@]}"; do
+#         if [[ ${dates[i]} -gt $minDate ]]; then
+#             unset comm[i]
+#             unset user[i]
+#             unset processID[i]
+#             unset rchar_array[i]
+#             unset wchar_array[i]
+#             unset rater_array[i]
+#             unset ratew_array[i]
+#             unset dates[i]
+#         fi
+#     done
+# fi
 
+# Opção -m
+# if [[ $option -eq "-m" ]] ; then
+#     for i in "${!processID[@]}"; do
+#         if [[ ${processID[i]} -gt $minPID ]]; then
+#             unset comm[i]
+#             unset user[i]
+#             unset processID[i]
+#             unset rchar_array[i]
+#             unset wchar_array[i]
+#             unset rater_array[i]
+#             unset ratew_array[i]
+#             unset dates[i]
+#         fi
+#     done
+# fi
 
+# Opção -M
+# if [[ $option -eq "-M" ]] ; then
+#     for i in "${!processID[@]}"; do
+#         if [[ ${processID[i]} -lt $maxPID ]]; then
+#             unset comm[i]
+#             unset user[i]
+#             unset processID[i]
+#             unset rchar_array[i]
+#             unset wchar_array[i]
+#             unset rater_array[i]
+#             unset ratew_array[i]
+#             unset dates[i]
+#         fi
+#     done
+# fi
 
 # if [[ $option=="-s" ]] ; then
 #     echo "Bacalhau"
@@ -239,6 +276,8 @@ fi
 #         fi
 #     done
 # fi
+
+
 max=$(($count))
 
 # Impressão de dados
@@ -252,6 +291,9 @@ if [[ $numProcesses != 0 ]] ; then
         fi
         # AH só uma cena que eu descobri ontem o operador =~ é para ver se uma string é igual a uma expressão
         printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "${comm[$i]}" "${user[$i]}" "${processID[$i]}" "${rchar_array[$i]}" "${wchar_array[$i]}" "${rater_array[$i]}" "${ratew_array[$i]}" "${dates[$i]}"
+        if [[ $(($i+1)) -eq $numProcesses ]]; then
+            break
+        fi
     done
 else
     echo "AVISO: Nenhum processo válido encontrado" 
