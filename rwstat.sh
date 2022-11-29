@@ -27,7 +27,7 @@ start=$(date +%s)              # Guarda a data de início da execução do scrip
 end=$(date +%s)    # Guarda a data de fim da execução do script 
 seconds=${@: -1}              # Tempo de execuçaõ (s)
 total=0                 # Guarda o número de vezes que foram inseridos comandos errados
-pid=0                   # Guarda o pid do processo que está a ser analisado
+
 
 
 # Verificação se "s" é o ultimo argumento
@@ -46,19 +46,16 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
         s)  
             # Data mínima
             minDate=$OPTARG
-            minDate=$(date --date="$minDate" "+%b %d %H:%M" )    # Guarda a data de início da execução do script
-            if [ $? -ne 0 ]; then
-                echo "Data de início inválida"
-                exit 1
-            fi
+            # Guarda a data mínima em segundos
+            sDate_seconds=$(date -d "$minDate" +%s)
             option="-s"
         
         ;;
 
         e)
             option="-e"
-            eDate_opt=$OPTARG                  # Guarda a data de fim
-            eDate_opt=$(date -d "$eDate_opt" + "%s")      # Guarda a data de fim em segundos
+            eDate=$OPTARG                  # Guarda a data de fim
+            eDate_seconds=$(date -d "$eDate" +%s)      # Guarda a data de fim em segundos
         ;;
 
         u)
@@ -68,10 +65,6 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
         ;;
 
         m)
-            if ! [[ $OPTARG =~ $rexp ]] ; then       # Verifica do argumento, este tem de ser um número inteiro positivo
-                echo "Erro: O argumento do '-m' tem de ser um número positivo."
-                exit 1
-            fi
             minPID=$OPTARG                 # Guarda o PID mínimo
             option="-m"
 
@@ -213,6 +206,9 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
                 user=$(ps -p $pid -o user | tail -n +2)
             
                 # start_time
+                
+                sdate=$(ps -p $pid -o lstart | tail -n +2)
+                dates_seconds[$count]=$(date -d"$sdate" +%s) # Guarda a data em segundos
                 date=$(date -d "$(ps -p $pid -o lstart | tail -1 | awk '{print $1, $2, $3, $4}')" +"%b %d %H:%M" )
 
                 # Adicionar a um array as informações todas
@@ -225,71 +221,56 @@ done
 # ------------------------------------------------------------------------------------------
 
 # Opção -c
-# if [[ $option -eq "-c" ]]; then
-#     for i in "${!comm[@]}"; do
-#         command=(${comm[i]})
-#         first_char=${command:0:1}
-#         # Comparação de um comando com uma expressão regular
-        
-# 		if [[ ! $first_char =~ $comm_opt ]]; then    # Irá retirar todos os processos(mais as suas informações) que forem diferentes da expressão regular que o utilizador inseriu 
-# 			unset comm[i]   
-#             unset user[i]
-#             unset processID[i]
-#             unset rchar_array[i]
-#             unset wchar_array[i]
-#             unset rater_array[i]
-#             unset ratew_array[i]
-#             unset dates[i]
-# 		fi
-# 	done
-# fi
+if [[ $option -eq "-c" ]] ; then
+    for i in "${!process_info[@]}" ; do
+        aux=${process_info[i]}
+        commands=$aux[0]   # Vai buscar o comando
+        first_char=${commands:0:1}
+        # Comparação de um comando com uma expressão regular
+		if [[ ! $first_char =~ $comm_opt ]] ; then    # Irá retirar todos os processos(mais as suas informações) que forem diferentes da expressão regular que o utilizador inseriu 
+            unset process_info[$i]
+        fi
+    done
+fi
 
 # # Opção -u
-# if [[ $option -eq "-u" ]] ; then
-#     for i in "${!rater_array[@]}"; do
-#         for i in "${!user[@]}"; do
-#             if [[ ${user[i]} != $user_opt ]]; then
-#                 unset comm[i]
-#                 unset user[i]
-#                 unset processID[i]
-#                 unset rchar_array[i]
-#                 unset wchar_array[i]
-#                 unset rater_array[i]
-#                 unset ratew_array[i]
-#                 unset dates[i]
-#             fi
-#         done
-#     done
-# fi
+if [[ $option -eq "-u" ]] ; then
+    for i in "${!process_info[@]}" ; do
+        aux=(${process_info[i]})
+        user=$aux[1]
+        if [[ $user != $user_opt ]] ; then
+            unset process_info[$i]
+        fi
+    done
+fi
 
 # Opção -s 
-# if [[ $option -eq "-s" ]] ; then
-#     for i in "${!dates[@]}"; do
-#         if [[ ${dates[i]} -gt $minDate ]]; then
-#             unset comm[i]
-#             unset user[i]
-#             unset processID[i]
-#             unset rchar_array[i]
-#             unset wchar_array[i]
-#             unset rater_array[i]
-#             unset ratew_array[i]
-#             unset dates[i]
-#         fi
-#     done
-# fi
+if [[ $option -eq "-s" ]] ; then
+    for i in "${!dates_seconds[@]}" ; do
+        echo "${dates_seconds[i]}"
+        if ((${dates_seconds[i]} < $sDate_seconds)) ; then
+            unset process_info[$i]
+        fi
+    done
+fi
+
+# Opção -e
+if [[ $option -eq "-e" ]] ; then
+    for i in "${!dates_seconds[@]}" ; do
+        if [[ ${dates_seconds[i]} -gt $eDate_seconds ]] ; then
+            unset process_info[$i]
+        fi
+    done
+fi
 
 # Opção -m
 # if [[ $option -eq "-m" ]] ; then
-#     for i in "${!processID[@]}"; do
-#         if [[ ${processID[i]} -gt $minPID ]]; then
-#             unset comm[i]
-#             unset user[i]
-#             unset processID[i]
-#             unset rchar_array[i]
-#             unset wchar_array[i]
-#             unset rater_array[i]
-#             unset ratew_array[i]
-#             unset dates[i]
+#     echo "${process_info[2]}"
+#     for i in "${!process_info[@]}" ; do
+#         aux=(${process_info[i]})
+#         pids=$aux[2]
+#         if [[ ${pids[i]} -gt $minPID ]] ; then
+#             unset process_info[$i]
 #         fi
 #     done
 # fi
@@ -299,22 +280,6 @@ done
 #     for i in "${!processID[@]}"; do
 #         if [[ ${processID[i]} -lt $maxPID ]]; then
 #             unset comm[i]
-#             unset user[i]
-#             unset processID[i]
-#             unset rchar_array[i]
-#             unset wchar_array[i]
-#             unset rater_array[i]
-#             unset ratew_array[i]
-#             unset dates[i]
-#         fi
-#     done
-# fi
-
-# if [[ $option=="-s" ]] ; then
-#     echo "Bacalhau"
-#     for i in "${!dates_seconds[@]}" ; do
-#         if [[ $dates_seconds[i] -ge $sDate_opt ]] ; then
-#             unset comm[i]   
 #             unset user[i]
 #             unset processID[i]
 #             unset rchar_array[i]
@@ -396,7 +361,7 @@ if [[ $numProcesses != 0 ]] ; then
         if [[ ${information[0]} == "" ]]; then
             continue
         fi
-        printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]}
+        printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]}
         if [[ $(($i+1)) -eq $numProcesses ]]; then
             break
         fi
