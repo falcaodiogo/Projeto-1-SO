@@ -91,7 +91,7 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
     case $opt in
         c)  # Opção -c
             # Verifica se o valor inserido é uma expressão regular
-            if [[ ! $OPTARG =~ ^[a-zA-Z0-9]+$ || $OPTARG == "" ]] ; then
+            if [[ ! $OPTARG =~ ^[a-zA-Z0-9]+$ ||9 $OPTARG == "" ]] ; then
                 echo "ERRO: o argumento da opção -c tem de ser uma expressão regular"
                 exit 1
             fi
