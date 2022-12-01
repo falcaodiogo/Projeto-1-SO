@@ -16,6 +16,7 @@ declare -a user
 declare -a dates
 declare -a dates_seconds
 declare -a process_info
+declare -a information
 
 # Variáveis globais
 numProcesses="null"     # Número de processos  
@@ -236,7 +237,7 @@ max=$(($count))
 # Impressão de dados
 if [[ $numProcesses != 0 ]] ; then
     printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "COMM" "USER" "PID" "READB" "WRITEB" "RATER" "RATEW" "DATE"  # Impressão do cabeçalho
-    for ((i=0; i<$max ; i++)); do
+    for ((i=0; i<=$max; i++)) ; do
         # se o array for null, não imprime nada
         information=${process_info[i]}
         if [[ ${information[0]} == "" ]]; then
