@@ -41,27 +41,29 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
     case $opt in
         c)
             comm_opt=$OPTARG                  # Guarda o comando
-            option="-c"
+            option_c="-c"
         ;;
 
         s)  
             # Data mínima
-            minDate=$OPTARG
             # Guarda a data mínima em segundos
-            sDate_seconds=$(date -d "$minDate" +%s)
-            option="-s"
+            option_s="-s"
+            min_Date=$(date -d "$OPTARG" +%s)
+            if [[ -z "$min_Date" ]]; then
+                echo "ERRO: A data mínima não é válida"
+                exit 
+            fi
         
         ;;
 
         e)
-            option="-e"
-            eDate=$OPTARG                  # Guarda a data de fim
-            eDate_seconds=$(date -d "$eDate" +%s)      # Guarda a data de fim em segundos
+            option_e="-e"                 # Guarda a data de fim
+            max_Date=$(date -d "$OPTARG" +%s)      # Guarda a data de fim em segundos
         ;;
 
         u)
             user_opt=$OPTARG                   # Guarda o utilizador
-            option="-u"
+            option_u="-u"
 
         ;;
 
@@ -149,7 +151,8 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
                 # start_time
                 
                 sdate=$(ps -p $pid -o lstart | tail -n +2)
-                dates_seconds[$count]=$(date -d"$sdate" +%s) # Guarda a data em segundos
+                dates_seconds1[$count]=$(date -d"$sdate" +%s) # Guarda a data em segundos
+                dates_seconds2[$count]=$(date -d"$sdate" +%s) # Guarda a data em segundos
                 date=$(date -d "$(ps -p $pid -o lstart | tail -1 | awk '{print $1, $2, $3, $4}')" +"%b %d %H:%M" )
 
                 # Adicionar a um array as informações todas
@@ -162,10 +165,10 @@ done
 # ------------------------------------------------------------------------------------------
 
 # Opção -c
-if [[ $option -eq "-c" ]] ; then
+if [[ $option_c -eq "-c" ]] ; then
     for i in "${!process_info[@]}" ; do
         aux=${process_info[i]}
-        commands=$aux[0]   # Vai buscar o comando
+        commands=${aux[0]}   # Vai buscar o comando
         first_char=${commands:0:1}
         # Comparação de um comando com uma expressão regular
 		if [[ ! $first_char =~ $comm_opt ]] ; then    # Irá retirar todos os processos(mais as suas informações) que forem diferentes da expressão regular que o utilizador inseriu 
@@ -175,10 +178,10 @@ if [[ $option -eq "-c" ]] ; then
 fi
 
 # # Opção -u
-if [[ $option -eq "-u" ]] ; then
+if [[ $option_u -eq "-u" ]] ; then
     for i in "${!process_info[@]}" ; do
         aux=(${process_info[i]})
-        user=$aux[1]
+        user=${aux[1]}
         if [[ $user != $user_opt ]] ; then
             unset process_info[$i]
         fi
@@ -186,19 +189,18 @@ if [[ $option -eq "-u" ]] ; then
 fi
 
 # Opção -s 
-# if [[ $option -eq "-s" ]] ; then
-#     for i in "${!dates_seconds[@]}" ; do
-#         echo "${dates_seconds[i]}"
-#         if ((${dates_seconds[i]} < $sDate_seconds)) ; then
-#             unset process_info[$i]
-#         fi
-#     done
-# fi
+if [[ $option_s -eq "-s" ]] ; then
+    for i in "${!dates_seconds1[@]}" ; do
+        if [[ ${dates_seconds1[i]} -lt $min_Date ]] ; then
+            unset process_info[$i]
+        fi
+    done
+fi
 
 # Opção -e
-if [[ $option -eq "-e" ]] ; then
-    for i in "${!dates_seconds[@]}" ; do
-        if [[ ${dates_seconds[i]} -gt $eDate_seconds ]] ; then
+if [[ $option_e -eq "-e" ]] ; then
+    for i in "${!dates_seconds2[@]}" ; do
+        if [[ ${dates_seconds2[i]} -gt $max_Date ]] ; then
             unset process_info[$i]
         fi
     done
