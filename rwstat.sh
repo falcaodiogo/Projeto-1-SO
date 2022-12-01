@@ -6,14 +6,13 @@
 
 #!/bin/bash 
 
+# Verifica se o utilizador inseriu o tempo de execução
+if [[ $# == 0 ]] ; then
+    echo "ERRO: é necessário introduzir pelo menos um argumento obrigatório que é o tempo de execução em segundos"
+    exit 1
+fi
+
 # Definição de Arrays
-declare -a rchar_array   
-declare -a wchar_array   
-declare -a rater_array   
-declare -a ratew_array   
-declare -a comm          
-declare -a user          
-declare -a dates
 declare -a dates_seconds
 declare -a process_info
 declare -a information
@@ -23,15 +22,13 @@ numProcesses="null"     # Número de processos
 reverse=1               # Por defeito, a ordenação é feita por ordem decrescente dos valores de rater
 write_values=0          # Caso o utilizador insira a opção -w esta variável irá ser alterada para 1
 seconds=${@: -1}        # Tempo de execuçaõ (s)
-total=0                 # Guarda o número de vezes que foram inseridos comandos errados
 
-
-
-# Verificação se "s" é o ultimo argumento
-if [ "$seconds" != "${@: -1}" ]; then
-    echo "ERRO: O argumento do tipo inteiro e positivo tem de ser o último"
+# Verificação do valor de seconds
+if [[ ! $seconds =~ ^[0-9]+$ ]] ; then
+    echo "ERRO: o último argumento tem de ser um número inteiro positivo"
     exit 1
 fi
+
 
 sleep $seconds
 count=0
@@ -44,6 +41,12 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
             # Verifica se existem as informações rchar e wchar
             if $(cat /proc/$pid/io | grep -q 'rchar\|wchar'); then  
 
+                # command
+                comm=$(ps -p $pid -o comm | tail -n +2)
+
+                # user
+                user=$(ps -p $pid -o user | tail -n +2)
+
                 # pid
                 processID=$pid
 
@@ -54,7 +57,7 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
                 wchar=$(cat /proc/$pid/io | grep wchar | cut -d " " -f 2)
                 
                 # rater
-                rchar_new=$(cat /proc/$pid/io | grep 'rchar')   #novo rchar
+                rchar_new=$(cat /proc/$pid/io | grep 'rchar') 
                 rchar_new=${rchar_new//[!0-9]/}   # var_1//[^0-9]/ substitui tudo o que não for um número por nada
 
                 rater=$( echo "scale=2;($rchar_new-$rchar)/$seconds"|bc -l)  #rater = rchar_new - rchar / tempo de execução (s)
@@ -63,15 +66,8 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
                 wchar_new=$(cat /proc/$pid/io | grep 'wchar')
                 wchar_new=${wchar_new//[!0-9]/}  
                 ratew=$( echo "scale=2;($wchar_new-$wchar)/$seconds"|bc -l)
-
-                # command
-                comm=$(ps -p $pid -o comm | tail -n +2)
-                
-                # user
-                user=$(ps -p $pid -o user | tail -n +2)
             
-                # start_time
-                
+                # date
                 sdate=$(ps -p $pid -o lstart | tail -n +2)
                 dates_seconds[$count]=$(date -d"$sdate" +%s) # Guarda a data em segundos
                 date=$(date -d "$(ps -p $pid -o lstart | tail -1 | awk '{print $1, $2, $3, $4}')" +"%b %d %H:%M" )
@@ -83,11 +79,22 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
         fi
     fi
 done
+
+# Ordena o array por ordem decrescente dos valores de rater
+column=5                      
+IFS=$'\n' 
+sorted_array=$(sort -k $column -n -r<<<"${process_info[*]}")  # Ordena o array por ordem decrescente dos valores de rater
+unset IFS
 # ------------------------------------------------------------------------------------------
 
 while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
     case $opt in
         c)  # Opção -c
+            # Verifica se o valor inserido é uma expressão regular
+            if [[ ! $OPTARG =~ ^[a-zA-Z0-9]+$ || $OPTARG == "" ]] ; then
+                echo "ERRO: o argumento da opção -c tem de ser uma expressão regular"
+                exit 1
+            fi
             comm_opt=$OPTARG       # Guarda o comando inserido pelo utilizador
             for i in "${!process_info[@]}" ; do
                 aux=${process_info[i]}
@@ -173,13 +180,18 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
             fi
         ;;
 
-        r)
-            reverse=1                      # Ativa a ordenação reversa
+        r)  
+            reverse=1
+            write_values=0
         ;;
 
         w)
             reverse=0
             write_values=1                        # Ativa a ordenação por write values
+            column=6                      # Ativa a ordenação reversa
+            IFS=$'\n' 
+            sorted_array=($(sort -k $column -n -r<<<"${process_info[*]}")) # Ordena o array por ordem decrescente dos valores de ratew
+            unset IFS
 
         ;;
 
@@ -197,28 +209,28 @@ if [[ $numProcesses != 0 ]] ; then
     printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "COMM" "USER" "PID" "READB" "WRITEB" "RATER" "RATEW" "DATE"  # Impressão do cabeçalho
     if [[ $write_values == 1 && $reverse == 0 ]] ; then
         for ((i=0; i<=$max; i++)) ; do
-            information=${process_info[i]}
-            # se o array for null, não imprime nada
-            if [[ ${information[0]} == "" || ${information[5]} == 0 || ${information[6]} == 0 ]]; then
+            information=(${sorted_array[i]})
+            # se o valor do comando for null, não imprime nada
+            if [[ ${information[0]} == "" ]]; then
                 continue
             fi
-            printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]} | sort -k 6 -nr
+            printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]}
             # Para a opção -p parar de imprimir quandp chegar ao número de processos inserido pelo utilizador
-            if [[ $(($i+1)) -eq $numProcesses ]]; then
-            break
+            if [[ $(($i+1)) -eq $numProcesses ]] ; then
+                break
             fi
         done
     else
         for ((i=0; i<=$max; i++)) ; do
-            information=${process_info[i]}
-            # se o array for null, não imprime nada
-            if [[ ${information[0]} == "" || ${information[5]} == null || ${information[6]} == null ]]; then
+            information=${sorted_array[i]}
+            # se o valor do comando for null, não imprime nada
+            if [[ ${information[0]} == "" ]] ; then
                 continue
             fi
-            printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]} | sort -k 5 -nr
+            printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]}
             # Para a opção -p parar de imprimir quandp chegar ao número de processos inserido pelo utilizador
-            if [[ $(($i+1)) -eq $numProcesses ]]; then
-            break
+            if [[ $(($i+1)) -eq $numProcesses ]] ; then
+                break
             fi
         done  
         # printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]}     
