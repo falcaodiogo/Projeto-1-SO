@@ -21,11 +21,8 @@ declare -a information
 # Variáveis globais
 numProcesses="null"     # Número de processos  
 reverse=1               # Por defeito, a ordenação é feita por ordem decrescente dos valores de rater
-comm_opt=". *"          # Caso o utilizador não insira nenhum argumento do tipo '-c' irá guardar todos os processos
-user_opt="*"                # Caso o utilizador não insira nenhum argumento do tipo '-u' irá guardar todos os utilizadores
-start=$(date +%s)              # Guarda a data de início da execução do script
-end=$(date +%s)    # Guarda a data de fim da execução do script 
-seconds=${@: -1}              # Tempo de execuçaõ (s)
+write_values=0          # Caso o utilizador insira a opção -w esta variável irá ser alterada para 1
+seconds=${@: -1}        # Tempo de execuçaõ (s)
 total=0                 # Guarda o número de vezes que foram inseridos comandos errados
 
 
@@ -182,12 +179,12 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
 
         w)
             reverse=0
-            order=1                        # Ativa a ordenação por write values
+            write_values=1                        # Ativa a ordenação por write values
 
         ;;
 
         *)
-            echo "ERRO: Argumento(s) inválido(s)!!"
+            echo "ERRO: Argumento(s) inválido(s)"
             exit 1
         ;;
     esac
@@ -198,28 +195,34 @@ max=$(($count))
 # Impressão de dados
 if [[ $numProcesses != 0 ]] ; then
     printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "COMM" "USER" "PID" "READB" "WRITEB" "RATER" "RATEW" "DATE"  # Impressão do cabeçalho
-    for ((i=0; i<=$max; i++)) ; do
-        # se o array for null, não imprime nada
-        # descending order of rater
-        
-        information=${process_info[i]}
-        if [[ $reverse == 1 ]] ; then
-            printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]} | sort -n -k 6
-        else
-            if [[ $order == 1 ]] ; then
-                printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" ${process_info[$i]} | sort -n -k 6
-            else
-                printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" ${process_info[$i]} | sort -n -k 5
+    if [[ $write_values == 1 && $reverse == 0 ]] ; then
+        for ((i=0; i<=$max; i++)) ; do
+            information=${process_info[i]}
+            # se o array for null, não imprime nada
+            if [[ ${information[0]} == "" || ${information[5]} == 0 || ${information[6]} == 0 ]]; then
+                continue
             fi
-        fi
-        if [[ ${information[0]} == "" ]]; then
-            continue
-        fi
-        printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]}
-        if [[ $(($i+1)) -eq $numProcesses ]]; then
+            printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]} | sort -k 6 -nr
+            # Para a opção -p parar de imprimir quandp chegar ao número de processos inserido pelo utilizador
+            if [[ $(($i+1)) -eq $numProcesses ]]; then
             break
-        fi
-    done
+            fi
+        done
+    else
+        for ((i=0; i<=$max; i++)) ; do
+            information=${process_info[i]}
+            # se o array for null, não imprime nada
+            if [[ ${information[0]} == "" || ${information[5]} == null || ${information[6]} == null ]]; then
+                continue
+            fi
+            printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]} | sort -k 5 -nr
+            # Para a opção -p parar de imprimir quandp chegar ao número de processos inserido pelo utilizador
+            if [[ $(($i+1)) -eq $numProcesses ]]; then
+            break
+            fi
+        done  
+        # printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]}     
+    fi
 else
     echo "AVISO: Nenhum processo válido encontrado" 
     exit 1
