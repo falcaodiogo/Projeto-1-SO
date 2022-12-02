@@ -12,6 +12,8 @@
 declare -a dates_seconds
 declare -a process_info
 declare -a information
+declare -a rchar_array
+declare -a wchar_array
 
 # Variáveis globais
 numProcesses="null"     # Número de processos  
@@ -34,9 +36,20 @@ if [[ ! $seconds =~ ^[0-9]+$ ]] ; then
     exit 1
 fi
 
+#----------------- Obtenção dos valores de rchar e wchar antes da execução do programa ----------------- #
+for entry in $(ps -eo pid | tail -n +2); do
+    if [[ -r "/proc/$entry/io" ]] ; then
+        pid_new=$entry     # Obtenção do PID
+        rchar=$(cat /proc/$entry/io | grep rchar | cut -d " " -f 2)  # Obtenção do valor de rchar inicial
+        wchar=$(cat /proc/$entry/io | grep wchar | cut -d " " -f 2)  # Obtenção do valor de wchar inicial
+
+        rchar_array[$pid_new]=$rchar
+        wchar_array[$pid_new]=$wchar
+    fi
+done
+
 sleep $seconds
 count=0
-
 
 #----------------- Indexação dos dados em arrays  ----------------- #
 
@@ -57,22 +70,23 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
                 # pid
                 processID=$pid
 
-                # rchar
-                rchar=$(cat /proc/$pid/io | grep rchar | cut -d " " -f 2) 
+                # readb
+                readb=$(cat /proc/$pid/io | grep rchar | cut -d " " -f 2) 
 
-                # wchar
-                wchar=$(cat /proc/$pid/io | grep wchar | cut -d " " -f 2)
+                # writeb
+                writeb=$(cat /proc/$pid/io | grep wchar | cut -d " " -f 2)
                 
                 # rater
-                rchar_new=$(cat /proc/$pid/io | grep 'rchar') 
-                rchar_new=${rchar_new//[!0-9]/}   # var_1//[^0-9]/ substitui tudo o que não for um número por nada
-
-                rater=$( echo "scale=2;($rchar_new-$rchar)/$seconds"|bc -l)  #rater = rchar_new - rchar / tempo de execução (s)
+                var1=$(cat /proc/$pid/io | grep 'rchar' | tr -dc '0-9') 
+                rchar_new=${var1//[!0-9]/} 
+                sub_rchar=$(($rchar_new-${rchar_array[$pid]}))
+                rater=$( echo "scale=2;$sub_rchar/$seconds" | bc -l)  #rater = rchar_new - rchar / tempo de execução (s)
 
                 # ratew
-                wchar_new=$(cat /proc/$pid/io | grep 'wchar')
-                wchar_new=${wchar_new//[!0-9]/}  
-                ratew=$( echo "scale=2;($wchar_new-$wchar)/$seconds"|bc -l)
+                var2=$(cat /proc/$pid/io | grep 'wchar')
+                wchar_new=${var2//[!0-9]/} 
+                sub_wchar=$(($wchar_new - ${wchar_array[$pid]}))
+                ratew=$( echo "scale=2;$sub_wchar/$seconds" | bc -l)
             
                 # date
                 sdate=$(ps -p $pid -o lstart | tail -n +2)
@@ -80,7 +94,7 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
                 date=$(date -d "$(ps -p $pid -o lstart | tail -1 | awk '{print $1, $2, $3, $4}')" +"%b %d %H:%M" )
 
                 # Adicionar a um array as informações todas
-                process_info[$count]="$comm $user $processID $rchar $wchar $rater $ratew $date"
+                process_info[$count]="$comm $user $processID $readb $writeb $rater $ratew $date"
                 count=$(($count+1))
             fi
         fi
