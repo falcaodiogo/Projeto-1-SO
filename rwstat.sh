@@ -19,7 +19,7 @@ declare -a wchar_array
 numProcesses="null"     # Número de processos  
 reverse=1               # Por defeito, a ordenação é feita por ordem decrescente dos valores de rater
 write_values=0          # Caso o utilizador insira a opção -w esta variável irá ser alterada para 1
-seconds=${@: -1}        # Tempo de execuçaõ (s)
+seconds=${@: -1}        # Tempo de execução (s)
 
 
 #----------------- Verificação e validação do argumento obrigatório ----------------- #
@@ -36,7 +36,7 @@ if [[ ! $seconds =~ ^[0-9]+$ ]] ; then
     exit 1
 fi
 
-#----------------- Obtenção dos valores de rchar e wchar antes da funçãoo sleep ----------------- #
+#----------------- Indexação dos dados em arrays  ----------------- #
 for entry in $(ps -eo pid | tail -n +2); do
     if [[ -r "/proc/$entry/io" ]] ; then
         pid_new=$entry     # Obtenção do PID
@@ -50,9 +50,6 @@ done
 
 sleep $seconds
 count=0
-
-#----------------- Indexação dos dados em arrays  ----------------- #
-
 for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
     # verifica se o processo existe
     if ps -p $pid > /dev/null; then 
@@ -248,10 +245,6 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
 
             reverse=0
             write_values=1                        # Ativa a ordenação por write values
-            column=7                     # Ativa a ordenação reversa
-            IFS=$'\n' 
-            process_info=($(sort -k $column -n -r<<<"${process_info[*]}")) # Ordena o array por ordem decrescente dos valores de ratew
-            unset IFS
 
         ;;
 
@@ -271,11 +264,13 @@ process_info=($(sort -k $column -n -r<<<"${process_info[*]}")) # Ordena o array 
 unset IFS
 
 #--------------------------------- Impressão de dados ---------------------------------#
-
-# Impressão de dados
 if [[ $numProcesses != 0 ]] ; then
     printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "COMM" "USER" "PID" "READB" "WRITEB" "RATER" "RATEW" "DATE"  # Impressão do cabeçalho
     if [[ $write_values -eq 1 && $reverse -eq 0 ]] ; then
+            column=7                     # Ativa a ordenação reversa
+            IFS=$'\n' 
+            process_info=($(sort -k $column -n -r<<<"${process_info[*]}")) # Ordena o array por ordem decrescente dos valores de ratew
+            unset IFS
         for ((i=0; i<=$count; i++)) ; do
             information=(${process_info[i]})
             # se o valor do comando for null, não imprime nada
