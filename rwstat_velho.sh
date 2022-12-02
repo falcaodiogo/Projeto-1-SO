@@ -1,7 +1,7 @@
 # Trabalho Prático 1 - SO
 # Realizado por:
-#       Diogo Falcão, Nº108712, PX
-#       Jośe Gameiro, Nº108840, PX
+#       Diogo Falcão, Nº108712, P3
+#       Jośe Gameiro, Nº108840, P3
 
 
 #!/bin/bash 
