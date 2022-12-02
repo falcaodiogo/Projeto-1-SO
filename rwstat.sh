@@ -6,11 +6,7 @@
 
 #!/bin/bash 
 
-# Verifica se o utilizador inseriu o tempo de execução
-if [[ $# == 0 ]] ; then
-    echo "ERRO: é necessário introduzir pelo menos um argumento obrigatório que é o tempo de execução em segundos"
-    exit 1
-fi
+# ----------------- Inicialização de dados ----------------- #
 
 # Definição de Arrays
 declare -a dates_seconds
@@ -23,16 +19,27 @@ reverse=1               # Por defeito, a ordenação é feita por ordem decresce
 write_values=0          # Caso o utilizador insira a opção -w esta variável irá ser alterada para 1
 seconds=${@: -1}        # Tempo de execuçaõ (s)
 
+
+#----------------- Verificação e validação do argumento obrigatório ----------------- #
+
+# Verifica se o utilizador inseriu o tempo de execução
+if [[ $# == 0 ]] ; then
+    echo "ERRO: é necessário introduzir pelo menos um argumento obrigatório que é o tempo de execução em segundos"
+    exit 1
+fi
+
 # Verificação do valor de seconds
 if [[ ! $seconds =~ ^[0-9]+$ ]] ; then
     echo "ERRO: o último argumento tem de ser um número inteiro positivo"
     exit 1
 fi
 
-
 sleep $seconds
 count=0
-#------------------------------------------------------------------------------------------
+
+
+#----------------- Indexação dos dados em arrays  ----------------- #
+
 for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
     # verifica se o processo existe
     if ps -p $pid > /dev/null; then 
@@ -80,18 +87,20 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
     fi
 done
 
+max=$(($count))
 
-# ------------------------------------------------------------------------------------------
+#----------------- Argumentos opcionais  ----------------- #
 
 validate=0
 validate_args=0
+
 while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
-    validate_args=$(($validate_args+1))    # Conta o número de argumentos inseridos pelo utilizador
-    variables=$# # Número de argumentos
+    validate_args=$(($validate_args+1))     # Conta o número de argumentos inseridos pelo utilizador
+    variables=$#                            # Número de argumentos
     case $opt in
         c)  # Opção -c
-            comm_opt=$OPTARG
 
+            comm_opt=$OPTARG
             validate_args=$(($validate_args+1))
             if [[ $validate_args -ge $((variables)) ]] ; then  # Verifica se o utilizador inseriu mais argumentos
                 echo "ERRO: não se pode utilizar o argumento dos segundos para a opção -c"
@@ -106,16 +115,17 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
                     unset process_info[$i]
                 fi
             done
+
         ;;
 
         u)  # Opção -u
-               
+
+            user_opt=$OPTARG  
             validate_args=$(($validate_args+1))
             if [[ $validate_args -ge $((variables)) ]] ; then  # Verifica se o utilizador inseriu o argumento dos segundos para a opção -u
                 echo "ERRO: não se pode utilizar o argumento dos segundos para a opção -u"
                 exit 1
             fi
-            user_opt=$OPTARG  
             for i in "${!process_info[@]}" ; do
                 aux=(${process_info[i]})
                 user=${aux[1]}
@@ -123,10 +133,11 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
                     unset process_info[$i]
                 fi
             done
+
         ;;
 
         s)  # Opção -s
-            # Guarda a data mínima em segundos inserida pelo utilizador
+
             validate_args=$((validate_args+1))
 			if [[ $validate_args -ge $((variables)) ]];then  # Verifica se o utilizador inseriu o argumento dos segundos
 				echo "ERRO: não se pode utilizar o argumento dos segundos para a opção -s"
@@ -142,17 +153,17 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
                    unset process_info[$i]
                 fi
             done
-        
+
         ;;
 
         e)  # Opção -e
+
             validate_args=$((validate_args+1))
             if [[ $validate_args -ge $((variables)) ]] ; then
                 echo "ERRO: não se pode utilizar o argumento dos segundos para a opção -e"
                 exit 1
             fi
             max_Date=$(date -d "$OPTARG" +%s)  # Guarda a data de fim em segundos inserida pelo utilizador
-            # Verifica se a data inserida é válida
             if [[ -z "$max_Date" ]]; then
                 echo "ERRO: A data máxima não é válida"
                 exit 
@@ -162,10 +173,11 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
                     unset process_info[$i]
                 fi
             done
+
         ;;
 
         m)  # Opção -m
-            # Verifica se o numero inserido é inteiro e positivo
+
             if [[ $OPTARG =~ ^[0-9]+$ ]] ; then
                 minPID=$OPTARG
             else
@@ -180,10 +192,10 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
                 fi
             done
 
-
         ;;
 
         M)  # Opção -M
+
             if [[ $OPTARG =~ ^[0-9]+$ ]] ; then
                 maxPID=$OPTARG
             else
@@ -201,7 +213,7 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
         ;;
 
         p) # Opção -p
-            
+
             validate_args=$((validate_args+1))
             if [[ $validate_args -ge $((variables)) ]] ; then  # Verifica se o utilizador inseriu mais argumentos depois do -p
                 echo "ERRO: não se pode utilizar o argumento dos segundos para a opção -e"
@@ -212,14 +224,18 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
                 echo "ERRO: o número de processos tem de ser maior que 0"
                 exit 1
             fi
+
         ;;
 
         r)  
+
             reverse=1
             write_values=0
+
         ;;
 
         w)
+
             reverse=0
             write_values=1                        # Ativa a ordenação por write values
             column=7                     # Ativa a ordenação reversa
@@ -230,15 +246,16 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
         ;;
 
         *)
+
             echo "ERRO: Argumento(s) inválido(s)"
             exit 1
+
         ;;
     esac
 done
 
 
-
-max=$(($count))
+#--------------------------------- Impressão de dados ---------------------------------#
 
 # Impressão de dados
 if [[ $numProcesses != 0 ]] ; then
