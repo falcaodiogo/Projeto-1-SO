@@ -100,9 +100,7 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
         fi
     fi
 done
-
-max=$(($count))
-
+echo "$count"
 #----------------- Argumentos opcionais  ----------------- #
 
 validate=0
@@ -268,14 +266,19 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
     esac
 done
 
+# Ordenação dos processos por ordem decrescente dos valores de rater
+column=6                   
+IFS=$'\n' 
+process_info=($(sort -k $column -n -r<<<"${process_info[*]}")) # Ordena o array por ordem decrescente dos valores de rater
+unset IFS
 
 #--------------------------------- Impressão de dados ---------------------------------#
 
 # Impressão de dados
 if [[ $numProcesses != 0 ]] ; then
     printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "COMM" "USER" "PID" "READB" "WRITEB" "RATER" "RATEW" "DATE"  # Impressão do cabeçalho
-    if [[ $write_values == 1 && $reverse == 0 ]] ; then
-        for ((i=0; i<=$max; i++)) ; do
+    if [[ $write_values -eq 1 && $reverse -eq 0 ]] ; then
+        for ((i=0; i<=$count; i++)) ; do
             information=(${process_info[i]})
             # se o valor do comando for null, não imprime nada
             if [[ ${information[0]} == "" ]]; then
@@ -288,11 +291,7 @@ if [[ $numProcesses != 0 ]] ; then
             fi
         done
     else
-        column=6                     
-        IFS=$'\n' 
-        process_info=$(sort -k $column -n -r<<<"${process_info[*]}")  # Ordena o array por ordem decrescente dos valores de rater
-        unset IFS
-        for ((i=0; i<=$max; i++)) ; do
+        for ((i=0; i<=$count; i++)) ; do
             information=${process_info[i]}
             # se o valor do comando for null, não imprime nada
             if [[ ${information[0]} == "" ]] ; then
@@ -303,7 +302,7 @@ if [[ $numProcesses != 0 ]] ; then
             if [[ $(($i+1)) -eq $numProcesses ]] ; then
                 break
             fi
-        done  
+        done
         # printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]}     
     fi
 else
