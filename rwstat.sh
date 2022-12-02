@@ -250,7 +250,7 @@ if [[ $numProcesses != 0 ]] ; then
             if [[ ${information[0]} == "" ]]; then
                 continue
             fi
-            printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]} ${information[8]} ${information[9]} # Impressão dos dados
+            printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]} ${information[8]} ${information[9]} 
             # Para a opção -p parar de imprimir quandp chegar ao número de processos inserido pelo utilizador
             if [[ $(($i+1)) -eq $numProcesses ]] ; then
                 break
