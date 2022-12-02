@@ -165,7 +165,13 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
         ;;
 
         m)  # Opção -m
-            minPID=$OPTARG      # Guarda o PID mínimo inserido pelo utilizador
+            # Verifica se o numero inserido é inteiro e positivo
+            if [[ $OPTARG =~ ^[0-9]+$ ]] ; then
+                minPID=$OPTARG
+            else
+                echo "ERRO: o argumento da opção -m não é um número inteiro positivo"
+                exit 1
+            fi
             for i in "${!process_info[@]}" ; do
                 aux=(${process_info[i]})
                 pid=${aux[2]}
@@ -178,7 +184,12 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
         ;;
 
         M)  # Opção -M
-            maxPID=$OPTARG   # Guarda o PID máximo inserido pelo utilizador
+            if [[ $OPTARG =~ ^[0-9]+$ ]] ; then
+                maxPID=$OPTARG
+            else
+                echo "ERRO: o argumento da opção -m não é um número inteiro positivo"
+                exit 1
+            fi
             for i in "${!process_info[@]}" ; do
                 aux=(${process_info[i]})
                 pid=${aux[2]}
@@ -211,9 +222,9 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
         w)
             reverse=0
             write_values=1                        # Ativa a ordenação por write values
-            column=6                      # Ativa a ordenação reversa
+            column=7                     # Ativa a ordenação reversa
             IFS=$'\n' 
-            sorted_array=($(sort -k $column -n -r<<<"${process_info[*]}")) # Ordena o array por ordem decrescente dos valores de ratew
+            process_info=($(sort -k $column -n -r<<<"${process_info[*]}")) # Ordena o array por ordem decrescente dos valores de ratew
             unset IFS
 
         ;;
@@ -226,11 +237,6 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
 done
 
 
-# Ordena o array por ordem decrescente dos valores de rater
-column=5                      
-IFS=$'\n' 
-sorted_array=$(sort -k $column -n -r<<<"${process_info[*]}")  # Ordena o array por ordem decrescente dos valores de rater
-unset IFS
 
 max=$(($count))
 
@@ -239,20 +245,24 @@ if [[ $numProcesses != 0 ]] ; then
     printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %-10s \n" "COMM" "USER" "PID" "READB" "WRITEB" "RATER" "RATEW" "DATE"  # Impressão do cabeçalho
     if [[ $write_values == 1 && $reverse == 0 ]] ; then
         for ((i=0; i<=$max; i++)) ; do
-            information=(${sorted_array[i]})
+            information=(${process_info[i]})
             # se o valor do comando for null, não imprime nada
             if [[ ${information[0]} == "" ]]; then
                 continue
             fi
-            printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]}
+            printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]} ${information[8]} ${information[9]} # Impressão dos dados
             # Para a opção -p parar de imprimir quandp chegar ao número de processos inserido pelo utilizador
             if [[ $(($i+1)) -eq $numProcesses ]] ; then
                 break
             fi
         done
     else
+        column=6                     
+        IFS=$'\n' 
+        process_info=$(sort -k $column -n -r<<<"${process_info[*]}")  # Ordena o array por ordem decrescente dos valores de rater
+        unset IFS
         for ((i=0; i<=$max; i++)) ; do
-            information=${sorted_array[i]}
+            information=${process_info[i]}
             # se o valor do comando for null, não imprime nada
             if [[ ${information[0]} == "" ]] ; then
                 continue
