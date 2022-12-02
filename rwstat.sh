@@ -188,6 +188,11 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
 
         m)  # Opção -m
 
+            validate_args=$((validate_args+1))
+            if [[ $validate_args -ge $((variables)) ]] ; then
+                echo "ERRO: não se pode utilizar o argumento dos segundos para a opção -m"
+                exit 1
+            fi
             if [[ $OPTARG =~ ^[0-9]+$ ]] ; then
                 minPID=$OPTARG
             else
@@ -206,6 +211,11 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
 
         M)  # Opção -M
 
+            validate_args=$((validate_args+1))
+            if [[ $validate_args -ge $((variables)) ]] ; then
+                echo "ERRO: não se pode utilizar o argumento dos segundos para a opção -M"
+                exit 1
+            fi
             if [[ $OPTARG =~ ^[0-9]+$ ]] ; then
                 maxPID=$OPTARG
             else
@@ -226,7 +236,7 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
 
             validate_args=$((validate_args+1))
             if [[ $validate_args -ge $((variables)) ]] ; then  # Verifica se o utilizador inseriu mais argumentos depois do -p
-                echo "ERRO: não se pode utilizar o argumento dos segundos para a opção -e"
+                echo "ERRO: não se pode utilizar o argumento dos segundos para a opção -p"
                 exit 1
             fi
             numProcesses=$OPTARG           # Guarda o número de processos
