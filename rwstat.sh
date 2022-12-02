@@ -36,7 +36,7 @@ if [[ ! $seconds =~ ^[0-9]+$ ]] ; then
     exit 1
 fi
 
-#----------------- Obtenção dos valores de rchar e wchar antes da execução do programa ----------------- #
+#----------------- Obtenção dos valores de rchar e wchar antes da funçãoo sleep ----------------- #
 for entry in $(ps -eo pid | tail -n +2); do
     if [[ -r "/proc/$entry/io" ]] ; then
         pid_new=$entry     # Obtenção do PID
@@ -80,7 +80,7 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
                 var1=$(cat /proc/$pid/io | grep 'rchar' | tr -dc '0-9') 
                 rchar_new=${var1//[!0-9]/} 
                 sub_rchar=$(($rchar_new-${rchar_array[$pid]}))
-                rater=$( echo "scale=2;$sub_rchar/$seconds" | bc -l)  #rater = rchar_new - rchar / tempo de execução (s)
+                rater=$( echo "scale=2;$sub_rchar/$seconds" | bc -l)
 
                 # ratew
                 var2=$(cat /proc/$pid/io | grep 'wchar')
@@ -100,12 +100,10 @@ for pid in $(ps -eo pid | tail -n +2); do   # Percorre todos os processos
         fi
     fi
 done
-echo "$count"
+
+
 #----------------- Argumentos opcionais  ----------------- #
-
-validate=0
 validate_args=0
-
 while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
     validate_args=$(($validate_args+1))     # Conta o número de argumentos inseridos pelo utilizador
     variables=$#                            # Número de argumentos
@@ -151,7 +149,7 @@ while getopts ":c:s:e:u:m:M:p:rw" opt; do   # Percorrer todos os argumentos
         s)  # Opção -s
 
             validate_args=$((validate_args+1))
-			if [[ $validate_args -ge $((variables)) ]];then  # Verifica se o utilizador inseriu o argumento dos segundos
+			if [[ $validate_args -ge $((variables)) ]] ; then  # Verifica se o utilizador inseriu o argumento dos segundos
 				echo "ERRO: não se pode utilizar o argumento dos segundos para a opção -s"
 				exit 1
 			fi
@@ -281,7 +279,7 @@ if [[ $numProcesses != 0 ]] ; then
         for ((i=0; i<=$count; i++)) ; do
             information=(${process_info[i]})
             # se o valor do comando for null, não imprime nada
-            if [[ ${information[0]} == "" ]]; then
+            if [[ ${information[0]} == "" ]] ; then
                 continue
             fi
             printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]} ${information[8]} ${information[9]} 
@@ -302,8 +300,7 @@ if [[ $numProcesses != 0 ]] ; then
             if [[ $(($i+1)) -eq $numProcesses ]] ; then
                 break
             fi
-        done
-        # printf "%-40s %-20s %-10s %-20s %-10s %-15s %-15s %3s %3s %5s \n" ${information[0]} ${information[1]} ${information[2]} ${information[3]} ${information[4]} ${information[5]} ${information[6]} ${information[7]}     
+        done     
     fi
 else
     echo "AVISO: Nenhum processo válido encontrado" 
