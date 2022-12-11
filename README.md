@@ -1,3 +1,8 @@
 # SO_A01
 
-Pelo que parece, mexi no nome dos documentos e isto meio que bugou. O rwstat com a mensagem do commit grande é o que é para continuar. O rwstat com a mensagem commit "início" é para ignorar.
+## Primeiro Projeto da Cadeira de Sistemas Operativos 
+Projeto realizado por:
+- José Gameiro (Nºmec 108840)
+- Diogo Falcão (Nºmec 108712)
+
+Nota: Ainda não atribuída
