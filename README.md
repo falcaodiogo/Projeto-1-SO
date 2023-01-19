@@ -10,7 +10,7 @@ Nota: Ainda não atribuída
 ## Instruções de Execução
 Para executar o programa é necessário executar o seguinte comando para dar permissão para executar:
 ```
-chmod u=rwx rwstat.sh
+chmod u+x rwstat.sh
 ```
 
 Para correr basta executar o seguinte comando, passando como argumento um número inteiro qualquer:
