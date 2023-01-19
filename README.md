@@ -57,7 +57,8 @@ Comando:
 ```
 
 ### Opção -w
-Esta opção não apresenta argumentos e imprime os processos ordenados de forma decrescente pelos valores de ratew como por exemplo:
+Esta opção não apresenta argumentos e imprime os processos ordenados de forma decrescente pelos valores de ratew.
+Comando:
 ```
 ./rwstat.sh -w 10
 ```
