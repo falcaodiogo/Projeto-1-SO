@@ -5,7 +5,7 @@ Projeto realizado por:
 - José Gameiro (Nºmec 108840)
 - Diogo Falcão (Nºmec 108712)
 
-Nota: Ainda não atribuída
+Nota: 12
 
 ## Instruções de Execução
 Para executar o programa é necessário executar o seguinte comando para dar permissão para executar:
